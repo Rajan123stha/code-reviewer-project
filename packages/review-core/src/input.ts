@@ -1,6 +1,6 @@
-import { gitBlobSha, type RepoFileEntry } from '@reviewlens/context-engine';
+import { gitBlobSha, type FixCommit, type RepoFileEntry } from '@reviewlens/context-engine';
 
-export type { RepoFileEntry };
+export type { FixCommit, RepoFileEntry };
 
 export interface PullRequestMeta {
   owner: string;
@@ -34,6 +34,12 @@ export interface ReviewInput {
   diff: string;
   /** Snapshot at the PR head commit. */
   head: RepoSnapshot;
+  /**
+   * Bug-fix commits in the history before this change: only commits reachable from the
+   * base commit, so retrieval can never see the fix for the change under review. Needed
+   * by strategies with `usePastBugs`; without it they retrieve nothing.
+   */
+  fixCommits?: () => Promise<FixCommit[]>;
 }
 
 /** In-memory snapshot, for tests and for callers that already hold the files. */

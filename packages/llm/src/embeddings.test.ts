@@ -124,7 +124,7 @@ describe('GeminiEmbeddingProvider', () => {
     }));
     const keys = new GeminiKeyRunner({
       apiKeys: ['k1'],
-      clientFor: () => ({ models: { generateContent: vi.fn(), embedContent } }) as never,
+      clientFor: () => ({ models: { generateContent: vi.fn(), embedContent } }),
     });
     const provider = new GeminiEmbeddingProvider(keys);
     const client = new EmbeddingClient({ provider });

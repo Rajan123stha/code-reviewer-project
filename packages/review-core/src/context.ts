@@ -25,7 +25,7 @@ export function isReviewable(file: FileDiff): file is FileDiff & { newPath: stri
 }
 
 export interface ContextSection {
-  kind: 'diff' | 'file' | 'symbol';
+  kind: 'diff' | 'file' | 'symbol' | 'conventions' | 'past_bugs';
   path: string;
   text: string;
   tokens: number;
@@ -37,17 +37,47 @@ export interface ContextStats {
   estimatedTokens: number;
   diffFiles: { included: string[]; omitted: string[] };
   fullFiles: { included: string[]; omitted: string[] };
-  /** Graph strategies only. */
+  /** Set when the strategy built the repository symbol graph. */
+  graph?: GraphSummary;
+  /** Call-graph symbols added (S3, S4, S5). */
   symbols?: SymbolContextSummary;
+  /** Embedding matches added (S2). */
+  embeddings?: EmbeddingContextSummary;
+  conventions?: { found: number; included: number; tokens: number };
+  pastBugs?: {
+    /** False when the input carried no history, so nothing could be retrieved. */
+    available: boolean;
+    history: number;
+    matched: number;
+    included: number;
+    tokens: number;
+  };
+}
+
+export interface GraphSummary {
+  index: IndexStats;
+  symbols: number;
+  edges: number;
+  callsResolved: number;
+  callsTotal: number;
+  changedSymbols: string[];
 }
 
 export interface SymbolContextSummary {
-  index: IndexStats;
-  graph: { symbols: number; edges: number; callsResolved: number; callsTotal: number };
-  changedSymbols: string[];
   included: { name: string; role: string; distance: number; mode: string }[];
   signatureOnly: number;
   omitted: number;
+  tokens: number;
+}
+
+export interface EmbeddingContextSummary {
+  model: string;
+  /** Candidate chunks ranked (changed code excluded). */
+  chunks: number;
+  queries: number;
+  embedded: number;
+  fromCache: number;
+  included: { name: string; score: number; mode: string }[];
   tokens: number;
 }
 
