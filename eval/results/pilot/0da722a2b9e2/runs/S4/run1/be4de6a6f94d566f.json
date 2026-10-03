@@ -1,0 +1,272 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "3409d2400b1f0368",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 14214,
+    "diffFiles": {
+      "included": [
+        "Makefile",
+        "benchmarks/Makefile",
+        "lib/application.js",
+        "package.json",
+        "test/application/context.js",
+        "test/application/index.js",
+        "test/application/request.js",
+        "test/application/respond.js",
+        "test/application/response.js",
+        "test/application/use.js",
+        "test/context/cookies.js",
+        "test/context/onerror.js",
+        "test/context/state.js",
+        "test/request/href.js",
+        "test/response/attachment.js",
+        "test/response/body.js",
+        "test/response/status.js",
+        "test/response/type.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 90,
+        "filesIndexed": 69,
+        "parsed": 69,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 715
+      },
+      "symbols": 192,
+      "edges": 95,
+      "callsResolved": 206,
+      "callsTotal": 1548,
+      "changedSymbols": [
+        "lib/application.js:<module>",
+        "lib/application.js:Emitter",
+        "lib/application.js:Application.use",
+        "lib/application.js:Application.callback",
+        "lib/application.js:respond",
+        "test/application/context.js:<module>",
+        "test/application/index.js:<module>",
+        "test/application/request.js:<module>",
+        "test/application/respond.js:<module>",
+        "test/application/response.js:<module>",
+        "test/application/use.js:<module>",
+        "test/context/cookies.js:<module>",
+        "test/context/onerror.js:<module>",
+        "test/context/state.js:<module>",
+        "test/request/href.js:<module>",
+        "test/response/attachment.js:<module>",
+        "test/response/body.js:<module>",
+        "test/response/status.js:strip",
+        "test/response/type.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/application.js:Application.callback",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:respond",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:Emitter",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:Application.use",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "test/response/status.js:strip",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:debug",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:Application.createContext",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/application.js:Application.listen",
+          "role": "caller",
+          "distance": 1,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 1964
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 4737,
+      "outputTokens": 2455,
+      "cacheReadInputTokens": 11884,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 11712.9167,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "J9_AarOKCrjnqfkPlpmvqQc"
+  },
+  "candidates": [
+    {
+      "file": "test/response/body.js",
+      "line": 93,
+      "category": "maintainability",
+      "severity": "low",
+      "claim": "An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted English comments.",
+      "evidence": "ctx test is to show that we're not going",
+      "suggested_fix": "This test is to show that we're not going",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 2,
+      "body": "**Maintainability (low)**: An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted English comments.\n\n> `ctx test is to show that we're not going`\n\n**Suggested fix:** This test is to show that we're not going"
+    },
+    {
+      "file": "test/response/type.js",
+      "line": 58,
+      "category": "maintainability",
+      "severity": "low",
+      "claim": "An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted a comment here as well.",
+      "evidence": "// TODO: ctx is lame",
+      "suggested_fix": "// TODO: this is lame",
+      "confidence": 1,
+      "index": 1,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 3,
+      "body": "**Maintainability (low)**: An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted a comment here as well.\n\n> `// TODO: ctx is lame`\n\n**Suggested fix:** // TODO: this is lame"
+    },
+    {
+      "file": "test/application/respond.js",
+      "line": 12,
+      "category": "testing",
+      "severity": "low",
+      "claim": "The test description was incorrectly replaced with 'should function *(ctx)', making it nonsensical.",
+      "evidence": "it('should function *(ctx)', function(done){",
+      "suggested_fix": "it('should bypass app.respond', function(done){",
+      "confidence": 1,
+      "index": 2,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (low)**: The test description was incorrectly replaced with 'should function *(ctx)', making it nonsensical.\n\n> `it('should function *(ctx)', function(done){`\n\n**Suggested fix:** it('should bypass app.respond', function(done){"
+    }
+  ],
+  "selected": [
+    {
+      "file": "test/application/respond.js",
+      "line": 12,
+      "category": "testing",
+      "severity": "low",
+      "claim": "The test description was incorrectly replaced with 'should function *(ctx)', making it nonsensical.",
+      "evidence": "it('should function *(ctx)', function(done){",
+      "suggested_fix": "it('should bypass app.respond', function(done){",
+      "confidence": 1,
+      "index": 2,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (low)**: The test description was incorrectly replaced with 'should function *(ctx)', making it nonsensical.\n\n> `it('should function *(ctx)', function(done){`\n\n**Suggested fix:** it('should bypass app.respond', function(done){"
+    },
+    {
+      "file": "test/response/body.js",
+      "line": 93,
+      "category": "maintainability",
+      "severity": "low",
+      "claim": "An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted English comments.",
+      "evidence": "ctx test is to show that we're not going",
+      "suggested_fix": "This test is to show that we're not going",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 2,
+      "body": "**Maintainability (low)**: An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted English comments.\n\n> `ctx test is to show that we're not going`\n\n**Suggested fix:** This test is to show that we're not going"
+    },
+    {
+      "file": "test/response/type.js",
+      "line": 58,
+      "category": "maintainability",
+      "severity": "low",
+      "claim": "An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted a comment here as well.",
+      "evidence": "// TODO: ctx is lame",
+      "suggested_fix": "// TODO: this is lame",
+      "confidence": 1,
+      "index": 1,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 3,
+      "body": "**Maintainability (low)**: An over-aggressive search-and-replace of 'this' to 'ctx' has corrupted a comment here as well.\n\n> `// TODO: ctx is lame`\n\n**Suggested fix:** // TODO: this is lame"
+    }
+  ],
+  "startedAt": "2026-10-03T10:55:32.782Z",
+  "finishedAt": "2026-10-03T10:55:45.296Z"
+}

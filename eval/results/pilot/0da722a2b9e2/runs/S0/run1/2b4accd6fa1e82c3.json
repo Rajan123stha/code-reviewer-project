@@ -1,0 +1,102 @@
+{
+  "config": {
+    "strategy": "S0",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "9a23158388846cff",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S0",
+    "budget": 16000,
+    "estimatedTokens": 737,
+    "diffFiles": {
+      "included": [
+        "lib/helpers/schema/getPath.js",
+        "test/helpers/schema.getPath.test.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1587,
+      "outputTokens": 1315,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 49492.3051,
+    "attempts": 2,
+    "cached": false,
+    "requestId": "Y97Aav6CFMf-4-EPjt-6kAo"
+  },
+  "candidates": [
+    {
+      "file": "lib/helpers/schema/getPath.js",
+      "line": 28,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "The `isArray` flag is never reset to `false` when entering a non-array nested subdocument schema, causing subsequent numeric path segments to be incorrectly skipped.",
+      "evidence": "      if (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }",
+      "suggested_fix": "      isArray = !!schematype.$isMongooseDocumentArray;",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: The `isArray` flag is never reset to `false` when entering a non-array nested subdocument schema, causing subsequent numeric path segments to be incorrectly skipped.\n\n```\nif (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }\n```\n\n**Suggested fix:** isArray = !!schematype.$isMongooseDocumentArray;"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/helpers/schema/getPath.js",
+      "line": 28,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "The `isArray` flag is never reset to `false` when entering a non-array nested subdocument schema, causing subsequent numeric path segments to be incorrectly skipped.",
+      "evidence": "      if (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }",
+      "suggested_fix": "      isArray = !!schematype.$isMongooseDocumentArray;",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: The `isArray` flag is never reset to `false` when entering a non-array nested subdocument schema, causing subsequent numeric path segments to be incorrectly skipped.\n\n```\nif (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }\n```\n\n**Suggested fix:** isArray = !!schematype.$isMongooseDocumentArray;"
+    }
+  ],
+  "startedAt": "2026-10-03T10:51:51.208Z",
+  "finishedAt": "2026-10-03T10:52:40.747Z"
+}

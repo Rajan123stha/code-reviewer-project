@@ -1,0 +1,102 @@
+{
+  "config": {
+    "strategy": "S0",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "9a23158388846cff",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S0",
+    "budget": 16000,
+    "estimatedTokens": 317,
+    "diffFiles": {
+      "included": [
+        "src/client.js",
+        "test/unit/knex.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1128,
+      "outputTokens": 1219,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 60559.1407,
+    "attempts": 3,
+    "cached": false,
+    "requestId": "5N7AapCLGfiiqfkPjcLZ4QQ"
+  },
+  "candidates": [
+    {
+      "file": "test/unit/knex.js",
+      "line": 124,
+      "category": "testing",
+      "severity": "high",
+      "claim": "The assertion will fail to catch the error correctly because the throwing function is executed immediately instead of being passed as a callback, and the regex contains an unescaped '$' character which is treated as an end-of-line anchor.",
+      "evidence": "expect(knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n$ npm install oracle/\n    );",
+      "suggested_fix": "expect(() => knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n\\$ npm install oracle/\n    );",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (high)**: The assertion will fail to catch the error correctly because the throwing function is executed immediately instead of being passed as a callback, and the regex contains an unescaped '$' character which is treated as an end-of-line anchor.\n\n```\nexpect(knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n$ npm install oracle/\n    );\n```\n\n**Suggested fix:** expect(() => knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n\\$ npm install oracle/\n    );"
+    }
+  ],
+  "selected": [
+    {
+      "file": "test/unit/knex.js",
+      "line": 124,
+      "category": "testing",
+      "severity": "high",
+      "claim": "The assertion will fail to catch the error correctly because the throwing function is executed immediately instead of being passed as a callback, and the regex contains an unescaped '$' character which is treated as an end-of-line anchor.",
+      "evidence": "expect(knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n$ npm install oracle/\n    );",
+      "suggested_fix": "expect(() => knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n\\$ npm install oracle/\n    );",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (high)**: The assertion will fail to catch the error correctly because the throwing function is executed immediately instead of being passed as a callback, and the regex contains an unescaped '$' character which is treated as an end-of-line anchor.\n\n```\nexpect(knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n$ npm install oracle/\n    );\n```\n\n**Suggested fix:** expect(() => knex({ client: 'oracle' })).to.throw(\n      /Knex: run\\n\\$ npm install oracle/\n    );"
+    }
+  ],
+  "startedAt": "2026-10-03T10:53:53.472Z",
+  "finishedAt": "2026-10-03T10:54:54.083Z"
+}

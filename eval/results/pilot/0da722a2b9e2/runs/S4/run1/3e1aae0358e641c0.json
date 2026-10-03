@@ -1,0 +1,173 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "3409d2400b1f0368",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 16000,
+    "diffFiles": {
+      "included": [
+        "docs/Reference/Reply.md",
+        "docs/Reference/Request.md",
+        "lib/contentTypeParser.js",
+        "lib/context.js",
+        "lib/error-handler.js",
+        "lib/handleRequest.js",
+        "lib/reply.js",
+        "lib/request.js",
+        "lib/route.js",
+        "lib/symbols.js",
+        "lib/warnings.js",
+        "test/context-config.test.js",
+        "test/handler-context.test.js",
+        "test/internals/contentTypeParser.test.js",
+        "test/internals/handleRequest.test.js",
+        "test/internals/reply-serialize.test.js",
+        "test/internals/reply.test.js",
+        "test/internals/request-validate.test.js",
+        "test/internals/request.test.js",
+        "test/plugin.test.js",
+        "test/router-options.test.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 299,
+        "filesIndexed": 198,
+        "parsed": 198,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 3107
+      },
+      "symbols": 1271,
+      "edges": 568,
+      "callsResolved": 2060,
+      "callsTotal": 20908,
+      "changedSymbols": [
+        "lib/contentTypeParser.js:<module>",
+        "lib/context.js:<module>",
+        "lib/context.js:Context",
+        "lib/context.js:getPublicRouteContext",
+        "lib/context.js:getPublicRouteContext.get",
+        "lib/context.js:getPublicRouteContext.get",
+        "lib/error-handler.js:<module>",
+        "lib/error-handler.js:handleError",
+        "lib/error-handler.js:fallbackErrorHandler",
+        "lib/handleRequest.js:<module>",
+        "lib/handleRequest.js:handleRequest",
+        "lib/handleRequest.js:handler",
+        "lib/handleRequest.js:preValidationCallback",
+        "lib/handleRequest.js:preHandlerCallback",
+        "lib/reply.js:<module>",
+        "lib/reply.js:get",
+        "lib/reply.js:get",
+        "lib/reply.js:get",
+        "lib/reply.js:preserializeHook",
+        "lib/reply.js:preserializeHookEnd",
+        "lib/reply.js:wrapSeralizationError",
+        "lib/reply.js:onSendHook",
+        "lib/reply.js:onErrorHook",
+        "lib/reply.js:setupResponseListeners.onResFinished",
+        "lib/reply.js:notFound",
+        "lib/request.js:<module>",
+        "lib/request.js:Request",
+        "lib/request.js:buildRegularRequest._Request",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/request.js:get",
+        "lib/route.js:<module>",
+        "lib/route.js:runPreParsing",
+        "lib/symbols.js:keys",
+        "lib/warnings.js:<module>",
+        "test/context-config.test.js:<module>",
+        "test/context-config.test.js:handler",
+        "test/handler-context.test.js:<module>",
+        "test/internals/contentTypeParser.test.js:<module>",
+        "test/internals/handleRequest.test.js:<module>",
+        "test/internals/reply-serialize.test.js:<module>",
+        "test/internals/reply.test.js:<module>",
+        "test/internals/request-validate.test.js:<module>",
+        "test/internals/request.test.js:<module>",
+        "test/plugin.test.js:<module>",
+        "test/router-options.test.js:<module>",
+        "test/router-options.test.js:test"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/reply.js:preserializeHook",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        },
+        {
+          "name": "test/router-options.test.js:test",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        }
+      ],
+      "signatureOnly": 2,
+      "omitted": 52,
+      "tokens": 120
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 2300,
+      "outputTokens": 2534,
+      "cacheReadInputTokens": 15891,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 13311.0869,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "st7AauT0Ktf1g8UPl76k8QQ"
+  },
+  "candidates": [],
+  "selected": [],
+  "startedAt": "2026-10-03T10:53:33.652Z",
+  "finishedAt": "2026-10-03T10:53:50.170Z"
+}

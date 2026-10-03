@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { writeFileAtomic } from '@reviewlens/shared';
 import { RepoGraph } from './graph.js';
 import { languageFor, parseSource } from './parse.js';
 import { PARSER_VERSION, type FileParse, type Language } from './types.js';
@@ -57,11 +58,7 @@ export class FileParseCache implements ParseCache {
     }
   }
   async set(key: string, parse: FileParse) {
-    await mkdir(this.dir, { recursive: true });
-    const path = this.path(key);
-    const tmp = `${path}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(parse));
-    await rename(tmp, path);
+    await writeFileAtomic(this.path(key), JSON.stringify(parse));
   }
 }
 

@@ -1,0 +1,24 @@
+name: E6-models
+description: >-
+  Two different LLMs on S4 (needs ANTHROPIC_API_KEY for the second arm).
+manifest: ../../benchmark/manifests/benchmark-a.v1.json
+cases:
+  sample: 60 # review inputs, sampled round-robin across repositories
+  seed: 1
+  exclude_invalid: true
+runs: 3 # repeats per arm, to measure LLM nondeterminism
+k: [1, 3, 5, 10]
+matching:
+  line_tolerance: 3
+# Held constant in every arm. One pinned model with no fallback, so every result is
+# attributable to it; low effort keeps a sweep affordable on free-tier quotas.
+base:
+  model: gemini-3.5-flash
+  fallbackModels: []
+  effort: low
+baseline: gemini-3.5-flash
+arms:
+  - { id: gemini-3.5-flash, strategy: S4 }
+  - id: claude-opus-5-5
+    strategy: S4
+    config: { provider: anthropic, model: claude-opus-5-5, refusalFallback: false }

@@ -1,0 +1,47 @@
+[project]
+name = "rlharness"
+version = "0.1.0"
+description = "Reviewlens eval harness: run strategy configs over Benchmark A and score them"
+# The spec targets Python 3.11; the code avoids 3.11-only features so it also runs on 3.10.
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6"]
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.8"]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
+
+[project.scripts]
+rlharness = "rlharness.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# rlbench (the benchmark builder) is used as a library for manifests and git access.
+pythonpath = ["src", "../benchmark/src", "../benchmark/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src:../benchmark/src"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["matplotlib.*"]
+ignore_missing_imports = true
+
+[tool.ruff.lint.per-file-ignores]
+# Test data reads better on one line.
+"tests/*" = ["E501"]

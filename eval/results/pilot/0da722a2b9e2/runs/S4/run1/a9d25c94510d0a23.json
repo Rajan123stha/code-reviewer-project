@@ -1,0 +1,133 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "3409d2400b1f0368",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 471,
+    "diffFiles": {
+      "included": [
+        "src/client.js",
+        "test/unit/knex.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 197,
+        "filesIndexed": 162,
+        "parsed": 160,
+        "fromCache": 2,
+        "unreadable": 0,
+        "durationMs": 2479
+      },
+      "symbols": 1164,
+      "edges": 540,
+      "callsResolved": 1330,
+      "callsTotal": 8846,
+      "changedSymbols": [
+        "src/client.js:initializeDriver",
+        "test/unit/knex.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "src/client.js:initializeDriver",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 154
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1299,
+      "outputTokens": 803,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 25076.5416,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "Bd_AavOhCZD1g8UP0s2b6QQ"
+  },
+  "candidates": [
+    {
+      "file": "test/unit/knex.js",
+      "line": 124,
+      "category": "testing",
+      "severity": "high",
+      "claim": "The assertion evaluates the function call immediately instead of passing a function wrapper, which prevents the test from passing when the expected exception is thrown.",
+      "evidence": "expect(knex({ client: 'oracle' })).to.throw(",
+      "suggested_fix": "expect(() => knex({ client: 'oracle' })).to.throw(",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (high)**: The assertion evaluates the function call immediately instead of passing a function wrapper, which prevents the test from passing when the expected exception is thrown.\n\n> `expect(knex({ client: 'oracle' })).to.throw(`\n\n**Suggested fix:** expect(() => knex({ client: 'oracle' })).to.throw("
+    }
+  ],
+  "selected": [
+    {
+      "file": "test/unit/knex.js",
+      "line": 124,
+      "category": "testing",
+      "severity": "high",
+      "claim": "The assertion evaluates the function call immediately instead of passing a function wrapper, which prevents the test from passing when the expected exception is thrown.",
+      "evidence": "expect(knex({ client: 'oracle' })).to.throw(",
+      "suggested_fix": "expect(() => knex({ client: 'oracle' })).to.throw(",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Testing (high)**: The assertion evaluates the function call immediately instead of passing a function wrapper, which prevents the test from passing when the expected exception is thrown.\n\n> `expect(knex({ client: 'oracle' })).to.throw(`\n\n**Suggested fix:** expect(() => knex({ client: 'oracle' })).to.throw("
+    }
+  ],
+  "startedAt": "2026-10-03T10:54:57.302Z",
+  "finishedAt": "2026-10-03T10:55:24.916Z"
+}

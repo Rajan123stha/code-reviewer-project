@@ -1,0 +1,24 @@
+name: E3-graph-depth
+description: >-
+  Call-graph depth for S4 (callers and callees), with the token budget held constant.
+manifest: ../../benchmark/manifests/benchmark-a.v1.json
+cases:
+  sample: 60 # review inputs, sampled round-robin across repositories
+  seed: 1
+  exclude_invalid: true
+runs: 3 # repeats per arm, to measure LLM nondeterminism
+k: [1, 3, 5, 10]
+matching:
+  line_tolerance: 3
+# Held constant in every arm. One pinned model with no fallback, so every result is
+# attributable to it; low effort keeps a sweep affordable on free-tier quotas.
+base:
+  model: gemini-3.5-flash
+  fallbackModels: []
+  effort: low
+baseline: depth-0
+arms:
+  - { id: depth-0, strategy: S4, config: { graphDepth: 0 } }
+  - { id: depth-1, strategy: S4, config: { graphDepth: 1 } }
+  - { id: depth-2, strategy: S4, config: { graphDepth: 2 } }
+  - { id: depth-3, strategy: S4, config: { graphDepth: 3 } }

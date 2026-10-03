@@ -26,7 +26,7 @@ export type StrategyId = (typeof STRATEGY_IDS)[number];
  * comparison in the ablations, so every field is explicit (no hidden defaults downstream)
  * and the whole object is hashed and stored with each review.
  */
-export const strategyConfigSchema = z.object({
+export const strategyConfigSchema = z.strictObject({
   strategy: z.enum(STRATEGY_IDS),
   /** LLM provider; must match the client the pipeline is given. */
   provider: z.enum(PROVIDER_NAMES),

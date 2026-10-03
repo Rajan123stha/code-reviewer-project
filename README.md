@@ -4,9 +4,10 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 5, benchmark built.** Six context strategies review pull requests, and
-> Benchmark A (bug-introducing changes mined from real fix history) exists as a versioned
-> manifest. The eval harness and learned filter come next. See [docs/spec.md](docs/spec.md).
+> **Status: Phase 6, eval harness.** Six context strategies review pull requests, Benchmark A
+> (1,022 bug-introducing changes) is built, and the harness runs and scores ablations over it.
+> No ablation has been run at full size yet. The learned filter comes next. See
+> [docs/spec.md](docs/spec.md).
 
 | Strategy | Context sent with the diff                                       |
 | -------- | ---------------------------------------------------------------- |
@@ -54,22 +55,24 @@ Only the `opened` and `synchronize` actions on `pull_request` start a review. Th
 
 ## Repository layout
 
-| Path                      | Contents                                                             |
-| ------------------------- | -------------------------------------------------------------------- |
-| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)            |
-| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews             |
-| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range  |
-| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`               |
-| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly    |
-| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost            |
-| `packages/db`             | Prisma schema, migrations, review persistence                        |
-| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing    |
-| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser   |
-| `eval/benchmark`          | Benchmark A builder (Python): fix mining, SZZ, manifests, validation |
-| `infra/`                  | docker-compose, Dockerfile, Postgres init                            |
-| `docs/`                   | Spec and ADRs                                                        |
+| Path                             | Contents                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| `apps/api`                       | Fastify webhook receiver (`/webhooks/github`, `/healthz`)                               |
+| `apps/worker`                    | BullMQ consumer that runs the pipeline and posts reviews                                |
+| `apps/cli`                       | `reviewlens review`: the same pipeline on a local diff or git range                     |
+| `packages/review-core`           | Strategies, prompts, validation, dedupe: `runReview()`                                  |
+| `packages/context-engine`        | tree-sitter parsing, symbol graph, diff mapping, context assembly                       |
+| `packages/llm`                   | Provider interface, Claude provider, retries, cache, cost                               |
+| `packages/db`                    | Prisma schema, migrations, review persistence                                           |
+| `packages/shared`                | Env parsing, logger, OpenTelemetry setup, queue contract, hashing                       |
+| `packages/github`                | Octokit App client, PR/compare/contents calls, unified-diff parser                      |
+| `eval/benchmark`                 | Benchmark A builder (Python): fix mining, SZZ, manifests, validation                    |
+| `eval/harness`                   | Eval harness (Python): experiment specs, runner, matching, metrics, statistics, reports |
+| `eval/notebooks`, `eval/results` | Ablation notebook; versioned experiment outputs                                         |
+| `infra/`                         | docker-compose, Dockerfile, Postgres init                                               |
+| `docs/`                          | Spec and ADRs                                                                           |
 
-Later phases add `services/filter`, `eval/harness` and `apps/dashboard`.
+Later phases add `services/filter` and `apps/dashboard`.
 
 ## Prerequisites
 
@@ -185,6 +188,23 @@ python -m rlbench.cli sample --size 100 && python -m rlbench.cli label --sample 
 [eval/benchmark/README.md](eval/benchmark/README.md) explains how a case is made, the known
 weaknesses of blame-based SZZ, and how to validate a sample.
 [ADR 0007](docs/adr/0007-benchmark-a.md) records the design.
+
+## Evaluation
+
+The harness runs strategy configurations over Benchmark A through the same pipeline as the
+worker, and scores them: bug-catch recall@k with bootstrap confidence intervals, paired
+comparisons between strategies, localization, comments per review, tokens, cost and latency.
+
+```sh
+make eval-smoke                          # synthetic end-to-end check; no model or network
+make eval EXPERIMENT=E1-strategies       # run or resume an experiment, then score it
+```
+
+Experiments E1 to E7 are YAML files in `eval/harness/experiments`. Runs are resumable and stop
+cleanly when the model's quota runs out. Results (`summary.json`, `report.md`, `pareto.png`) go
+to `eval/results/<experiment>/<spec hash>/`, and `eval/notebooks/ablation.ipynb` renders them.
+[eval/harness/README.md](eval/harness/README.md) has the matching rules and metric definitions;
+[ADR 0008](docs/adr/0008-eval-harness.md) records the design.
 
 ## Development
 

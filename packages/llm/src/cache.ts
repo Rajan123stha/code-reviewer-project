@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { writeFileAtomic } from '@reviewlens/shared';
 import type { ProviderResponse } from './types.js';
 
 /** Stored form of a provider response. `output` is re-validated against the schema on read. */
@@ -44,11 +45,7 @@ export class FileCache implements ResponseCache {
   }
 
   async set(key: string, value: CachedResponse) {
-    const path = this.path(key);
-    await mkdir(join(this.dir, key.slice(0, 2)), { recursive: true });
     // Write then rename, so a crash never leaves a half-written entry behind.
-    const tmp = `${path}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(value));
-    await rename(tmp, path);
+    await writeFileAtomic(this.path(key), JSON.stringify(value));
   }
 }
