@@ -92,6 +92,7 @@ export class LLMClient {
         maxOutputTokens: request.maxOutputTokens,
         effort: request.effort ?? null,
         refusalFallback: request.refusalFallback ?? false,
+        fallbackModels: request.fallbackModels ?? [],
         cacheSalt: request.cacheSalt ?? null,
       }),
     );

@@ -39,6 +39,8 @@ const env = parseEnv(
     REVIEW_STRATEGY: z.enum(STRATEGY_IDS).default('S1'),
     /** Overrides the provider's default model, e.g. a pinned Gemini version. */
     REVIEW_MODEL: z.string().optional(),
+    /** Comma-separated; overrides the provider's default fallback models. Empty = none. */
+    REVIEW_FALLBACK_MODELS: z.string().optional(),
     /** Optional on-disk LLM response cache; useful when replaying the same PRs locally. */
     LLM_CACHE_DIR: z.string().optional(),
     WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
@@ -49,6 +51,13 @@ const logger = createLogger('worker', { level: env.LOG_LEVEL });
 const config = presetFor(env.REVIEW_STRATEGY, {
   provider: env.LLM_PROVIDER,
   ...(env.REVIEW_MODEL ? { model: env.REVIEW_MODEL } : {}),
+  ...(env.REVIEW_FALLBACK_MODELS !== undefined
+    ? {
+        fallbackModels: env.REVIEW_FALLBACK_MODELS.split(',')
+          .map((m) => m.trim())
+          .filter(Boolean),
+      }
+    : {}),
 });
 const github = createGitHubApp({
   appId: env.GITHUB_APP_ID,
@@ -66,6 +75,7 @@ const { llm } = createLLMFromEnv(process.env, {
   cache: env.LLM_CACHE_DIR ? new FileCache(env.LLM_CACHE_DIR) : undefined,
   onCall: (call) => logger.info({ llmCall: call }, 'llm call'),
   onKeyEvent: (event) => logger.warn({ keyEvent: event }, 'llm api key rotated out'),
+  onModelEvent: (event) => logger.warn({ modelEvent: event }, 'llm model skipped; using fallback'),
 });
 
 const worker = new Worker<ReviewJobData, ReviewJobResult>(

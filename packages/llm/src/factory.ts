@@ -2,7 +2,13 @@ import { z } from 'zod';
 import type { ResponseCache } from './cache.js';
 import { LLMClient } from './client.js';
 import { AnthropicProvider, DEFAULT_ANTHROPIC_MODEL } from './providers/anthropic.js';
-import { DEFAULT_GEMINI_MODEL, GeminiProvider, type GeminiKeyEvent } from './providers/gemini.js';
+import {
+  DEFAULT_GEMINI_FALLBACK_MODELS,
+  DEFAULT_GEMINI_MODEL,
+  GeminiProvider,
+  type GeminiKeyEvent,
+  type GeminiModelEvent,
+} from './providers/gemini.js';
 import { parseKeyList } from './providers/key-pool.js';
 import type { LLMCallRecord, LLMProvider } from './types.js';
 
@@ -12,6 +18,11 @@ export type ProviderName = (typeof PROVIDER_NAMES)[number];
 export const DEFAULT_MODELS: Readonly<Record<ProviderName, string>> = {
   gemini: DEFAULT_GEMINI_MODEL,
   anthropic: DEFAULT_ANTHROPIC_MODEL,
+};
+
+export const DEFAULT_FALLBACK_MODELS: Readonly<Record<ProviderName, readonly string[]>> = {
+  gemini: DEFAULT_GEMINI_FALLBACK_MODELS,
+  anthropic: [],
 };
 
 const booleanish = z
@@ -34,6 +45,7 @@ export interface LLMFromEnvOptions {
   cache?: ResponseCache | undefined;
   onCall?: (record: LLMCallRecord) => void;
   onKeyEvent?: (event: GeminiKeyEvent) => void;
+  onModelEvent?: (event: GeminiModelEvent) => void;
   /** Override the provider chosen by LLM_PROVIDER (e.g. from a strategy config). */
   provider?: ProviderName;
 }
@@ -55,6 +67,7 @@ export function createLLMFromEnv(
     provider = new GeminiProvider({
       apiKeys: keys,
       ...(options.onKeyEvent ? { onKeyEvent: options.onKeyEvent } : {}),
+      ...(options.onModelEvent ? { onModelEvent: options.onModelEvent } : {}),
     });
     if (env.GEMINI_FREE_TIER ?? true) costFn = () => 0;
   } else {

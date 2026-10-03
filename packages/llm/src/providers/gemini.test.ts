@@ -163,7 +163,10 @@ describe('GeminiProvider', () => {
         cooldownMs: 39_000,
       },
     ]);
-    expect(provider.pool.status()[0]).toMatchObject({ state: 'cooling', availableInMs: 39_000 });
+    expect(provider.poolFor(request.model).status()[0]).toMatchObject({
+      state: 'cooling',
+      availableInMs: 39_000,
+    });
   });
 
   it('parks a key until the Pacific-midnight reset on a daily quota', async () => {

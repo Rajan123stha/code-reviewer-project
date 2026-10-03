@@ -31,6 +31,7 @@ Options:
   --parse-cache <dir>  on-disk parse cache for graph strategies and indexing
   --provider <name>    gemini (default) or anthropic; default from LLM_PROVIDER
   --model <id>         override the provider's default model
+  --fallback-models <ids>  comma-separated models to try if the model is overloaded ("" = none)
   --budget <tokens>    override the context token budget
   --title <text>       PR title (default: "Local review")
   --body <text>        PR description
@@ -68,6 +69,7 @@ async function main() {
       strategy: { type: 'string', default: 'S1' },
       provider: { type: 'string' },
       model: { type: 'string' },
+      'fallback-models': { type: 'string' },
       budget: { type: 'string' },
       title: { type: 'string', default: 'Local review' },
       body: { type: 'string' },
@@ -133,6 +135,14 @@ async function main() {
     ...presetFor(values.strategy as StrategyId, {
       provider: providerName,
       ...(values.model ? { model: values.model } : {}),
+      ...(values['fallback-models'] !== undefined
+        ? {
+            fallbackModels: values['fallback-models']
+              .split(',')
+              .map((m) => m.trim())
+              .filter(Boolean),
+          }
+        : {}),
     }),
     ...(values.budget ? { contextTokenBudget: Number(values.budget) } : {}),
   });
@@ -185,6 +195,7 @@ async function main() {
         cache,
         onCall,
         onKeyEvent: (e) => console.error(`[keys] ${JSON.stringify(e)}`),
+        onModelEvent: (e) => console.error(`[model] ${JSON.stringify(e)}`),
       }).llm;
 
   const run = await runReview(input, config, {

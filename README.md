@@ -178,7 +178,8 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 | `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                          |
 | `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                           |
 | `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0`, `S1`, `S3` or `S4` (see Status above)               |
-| `REVIEW_MODEL`                | worker  | provider default         | `gemini-flash-latest` or `claude-opus-5-5`                |
+| `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                   |
+| `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded       |
 | `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                |
 | `LOG_LEVEL`                   | both    | `info`                   |                                                           |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                        |

@@ -11,11 +11,13 @@ import type { Effort, GenerateRequest, LLMProvider, ProviderResponse } from '../
 import { ApiKeyPool, type PoolKey } from './key-pool.js';
 
 /**
- * Alias that tracks Google's current Flash model. The concrete version that answered is
- * recorded per call (`servedModel` = the response's modelVersion); pin a concrete model
- * in the strategy config for experiments that must not drift.
+ * Pinned rather than the `gemini-flash-latest` alias, so results do not drift when Google
+ * moves the alias. The version that answered is recorded per call as `servedModel`.
  */
-export const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
+
+/** Tried in order when the primary model is overloaded, unavailable or out of quota. */
+export const DEFAULT_GEMINI_FALLBACK_MODELS: readonly string[] = ['gemini-3.5-flash'];
 
 /** Fallback wait when a 429 carries no RetryInfo. Free-tier limits are per minute. */
 const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 60_000;
@@ -32,7 +34,15 @@ export interface GeminiKeyEvent {
   cooldownMs?: number;
 }
 
+export interface GeminiModelEvent {
+  model: string;
+  next: string;
+  reason: string;
+}
+
 export interface GeminiProviderOptions {
+  /** Notified when a model is skipped in favor of the next fallback model. */
+  onModelEvent?: (event: GeminiModelEvent) => void;
   apiKeys: readonly string[];
   /** Notified when a key is rotated out; never receives the key itself. */
   onKeyEvent?: (event: GeminiKeyEvent) => void;
@@ -54,7 +64,9 @@ export interface GeminiProviderOptions {
  */
 export class GeminiProvider implements LLMProvider {
   readonly name = 'gemini';
-  readonly pool: ApiKeyPool;
+  private readonly apiKeys: readonly string[];
+  private readonly pools = new Map<string, ApiKeyPool>();
+  private readonly onModelEvent: ((event: GeminiModelEvent) => void) | undefined;
   private readonly clients = new Map<string, GeminiModelsClient>();
   private readonly clientFor: (apiKey: string) => GeminiModelsClient;
   private readonly onKeyEvent: ((event: GeminiKeyEvent) => void) | undefined;
@@ -62,35 +74,75 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(options: GeminiProviderOptions) {
     this.now = options.now ?? Date.now;
-    this.pool = new ApiKeyPool(options.apiKeys, this.now);
+    this.apiKeys = options.apiKeys;
+    new ApiKeyPool(options.apiKeys); // validates that there is at least one key
+    this.onModelEvent = options.onModelEvent;
     this.onKeyEvent = options.onKeyEvent;
     this.clientFor =
       options.clientFor ??
       ((apiKey) => new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } }));
   }
 
+  /**
+   * Try the requested model, then each fallback model in order. A model is skipped when it
+   * is overloaded (5xx), unavailable to this account, or every key is rate-limited for it
+   * (free-tier quotas are per model). Other errors are not retried on another model.
+   */
   async generate<T>(
     request: GenerateRequest<T>,
     signal: AbortSignal,
   ): Promise<ProviderResponse<T>> {
+    const models = [...new Set([request.model, ...(request.fallbackModels ?? [])])];
+    let lastError: LLMError | undefined;
+    let shortestWait: number | undefined;
+    for (const [i, model] of models.entries()) {
+      try {
+        const response = await this.generateWith(model, request, signal);
+        return i === 0 ? response : { ...response, fallbackUsed: true };
+      } catch (error) {
+        if (!(error instanceof LLMError) || !isModelSkippable(error)) throw error;
+        lastError = error;
+        if (error.kind === 'rate_limit' && error.retryAfterMs !== undefined) {
+          shortestWait = Math.min(shortestWait ?? Infinity, error.retryAfterMs);
+        }
+        if (i < models.length - 1) {
+          this.onModelEvent?.({ model, next: models[i + 1]!, reason: error.message });
+        }
+      }
+    }
+    // Every model failed. If any was only rate-limited, report the shortest wait so the
+    // client's retry loop comes back when the first key frees up.
+    if (lastError!.kind !== 'rate_limit' && shortestWait !== undefined) {
+      throw new LLMError('rate_limit', lastError!.message, {
+        status: 429,
+        retryAfterMs: shortestWait,
+      });
+    }
+    throw lastError!;
+  }
+
+  private async generateWith<T>(
+    model: string,
+    request: GenerateRequest<T>,
+    signal: AbortSignal,
+  ): Promise<ProviderResponse<T>> {
     const responseJsonSchema = toGeminiJsonSchema(request.schema);
+    const pool = this.poolFor(model);
     for (;;) {
-      const key = this.pool.acquire();
-      if (!key) throw this.exhaustedError();
+      const key = pool.acquire();
+      if (!key) throw this.exhaustedError(pool, model);
 
       let response;
       try {
         response = await this.client(key).models.generateContent({
-          model: request.model,
+          model,
           contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
           config: {
             systemInstruction: request.system,
             maxOutputTokens: request.maxOutputTokens,
             responseMimeType: 'application/json',
             responseJsonSchema,
-            ...(request.effort
-              ? { thinkingConfig: thinkingFor(request.model, request.effort) }
-              : {}),
+            ...(request.effort ? { thinkingConfig: thinkingFor(model, request.effort) } : {}),
             abortSignal: signal,
           },
         });
@@ -102,7 +154,7 @@ export class GeminiProvider implements LLMProvider {
           const cooldownMs = info.daily
             ? msUntilPacificMidnight(this.now())
             : (info.retryDelayMs ?? DEFAULT_RATE_LIMIT_COOLDOWN_MS);
-          this.pool.cooldown(key, cooldownMs, info.quotaId ?? 'rate limited');
+          pool.cooldown(key, cooldownMs, info.quotaId ?? 'rate limited');
           this.onKeyEvent?.({
             key: key.label,
             event: 'rate_limited',
@@ -112,7 +164,7 @@ export class GeminiProvider implements LLMProvider {
           continue;
         }
         if (info.keyRejected) {
-          this.pool.disable(key, info.message);
+          pool.disable(key, info.message);
           this.onKeyEvent?.({ key: key.label, event: 'disabled', reason: info.message });
           continue;
         }
@@ -144,7 +196,7 @@ export class GeminiProvider implements LLMProvider {
           cacheReadInputTokens: cached,
           cacheCreationInputTokens: 0,
         },
-        servedModel: response.modelVersion ?? request.model,
+        servedModel: response.modelVersion ?? model,
         fallbackUsed: false,
         stopReason: finish ?? null,
         requestId: response.responseId,
@@ -161,17 +213,37 @@ export class GeminiProvider implements LLMProvider {
     return client;
   }
 
-  private exhaustedError(): LLMError {
-    const wait = this.pool.msUntilAvailable();
+  /** Key pool for one model. Free-tier quotas are counted per model, so cooldowns are too. */
+  poolFor(model: string): ApiKeyPool {
+    let pool = this.pools.get(model);
+    if (!pool) {
+      pool = new ApiKeyPool(this.apiKeys, this.now);
+      this.pools.set(model, pool);
+    }
+    return pool;
+  }
+
+  private exhaustedError(pool: ApiKeyPool, model: string): LLMError {
+    const wait = pool.msUntilAvailable();
     if (wait === undefined) {
-      return new LLMError('auth', `all ${this.pool.size} Gemini API keys were rejected by the API`);
+      return new LLMError('auth', `all ${pool.size} Gemini API keys were rejected by the API`);
     }
     return new LLMError(
       'rate_limit',
-      `all ${this.pool.size} Gemini API keys are rate-limited; next available in ${Math.ceil(wait / 1000)} s`,
+      `all ${pool.size} Gemini API keys are rate-limited for ${model}; next available in ${Math.ceil(wait / 1000)} s`,
       { status: 429, retryAfterMs: wait },
     );
   }
+}
+
+/** Errors that say "this model cannot serve now", as opposed to "this request is bad". */
+function isModelSkippable(error: LLMError): boolean {
+  if (error.kind === 'server' || error.kind === 'rate_limit') return true;
+  return (
+    error.kind === 'bad_request' &&
+    (error.status === 404 ||
+      /no longer available|is not found|not supported for/i.test(error.message))
+  );
 }
 
 const REFUSAL_FINISH = new Set<string>([

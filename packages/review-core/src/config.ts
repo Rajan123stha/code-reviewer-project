@@ -1,4 +1,9 @@
-import { DEFAULT_MODELS, PROVIDER_NAMES, type ProviderName } from '@reviewlens/llm';
+import {
+  DEFAULT_FALLBACK_MODELS,
+  DEFAULT_MODELS,
+  PROVIDER_NAMES,
+  type ProviderName,
+} from '@reviewlens/llm';
 import { hashOf } from '@reviewlens/shared';
 import { z } from 'zod';
 
@@ -22,6 +27,11 @@ export const strategyConfigSchema = z.object({
   /** LLM provider; must match the client the pipeline is given. */
   provider: z.enum(PROVIDER_NAMES),
   model: z.string().min(1),
+  /**
+   * Models tried in order when `model` is overloaded, unavailable or out of quota. Empty
+   * for experiments that must be served by one model only.
+   */
+  fallbackModels: z.array(z.string().min(1)).readonly(),
   effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']),
   promptVersion: z.string().regex(/^[a-z-]+\/v\d+$/),
   /** Estimated tokens available for repository context (diff + files), excluding the prompt. */
@@ -49,6 +59,7 @@ export function configHash(config: StrategyConfig): string {
 const BASE = {
   provider: 'gemini',
   model: DEFAULT_MODELS.gemini,
+  fallbackModels: [...DEFAULT_FALLBACK_MODELS.gemini],
   effort: 'high',
   promptVersion: 'review/v2',
   contextTokenBudget: 16_000,
@@ -62,13 +73,14 @@ const BASE = {
 /** Preset for a strategy, switched to another provider (with that provider's default model). */
 export function presetFor(
   strategy: StrategyId,
-  overrides: { provider?: ProviderName; model?: string } = {},
+  overrides: { provider?: ProviderName; model?: string; fallbackModels?: string[] } = {},
 ): StrategyConfig {
   const provider = overrides.provider ?? PRESETS[strategy].provider;
   return strategyConfigSchema.parse({
     ...PRESETS[strategy],
     provider,
     model: overrides.model ?? DEFAULT_MODELS[provider],
+    fallbackModels: overrides.fallbackModels ?? [...DEFAULT_FALLBACK_MODELS[provider]],
     refusalFallback: provider === 'anthropic',
   });
 }

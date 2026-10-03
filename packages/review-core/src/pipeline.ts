@@ -156,6 +156,7 @@ export async function runReview(
     schema: reviewOutputSchema,
     schemaName: REVIEW_SCHEMA_NAME,
     maxOutputTokens: config.maxOutputTokens,
+    fallbackModels: config.fallbackModels,
     refusalFallback: config.refusalFallback,
     cacheSalt: deps.cacheSalt,
   });
