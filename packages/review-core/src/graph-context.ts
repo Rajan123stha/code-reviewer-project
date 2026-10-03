@@ -42,17 +42,19 @@ const remaining = (context: BuiltContext) => context.stats.budget - context.stat
  * the budget, in this order: conventions, past bugs (both small and capped), then code
  * (call-graph symbols or embedding matches). All of it is derived from the snapshot and
  * the history before the change, so it stays a function of the pipeline's inputs.
+ *
+ * Returns the repository graph when the strategy built one, for reuse downstream.
  */
 export async function addExtraContext(
   context: BuiltContext,
   args: ExtraContextArgs,
-): Promise<void> {
+): Promise<RepoGraph | null> {
   const { config } = args;
   if (config.useConventions) await addConventions(context, args);
   if (config.usePastBugs) await addPastBugs(context, args);
 
   const graphNeeded = usesCallGraph(config.strategy) || config.embeddingTopK > 0;
-  if (!graphNeeded) return;
+  if (!graphNeeded) return null;
   if (!args.head.listFiles) {
     throw new Error(`strategy ${config.strategy} needs a snapshot that can list files`);
   }
@@ -72,6 +74,7 @@ export async function addExtraContext(
 
   if (usesCallGraph(config.strategy)) await addSymbols(context, args, graph, changed);
   if (config.embeddingTopK > 0) await addSimilarCode(context, args, graph, changed);
+  return graph;
 }
 
 async function addConventions(context: BuiltContext, args: ExtraContextArgs) {

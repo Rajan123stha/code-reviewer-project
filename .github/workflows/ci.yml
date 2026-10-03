@@ -47,3 +47,31 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: mypy
       - run: pytest -q
+
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: >-
+          pip install pytest ruff mypy pyyaml types-PyYAML matplotlib
+          numpy scikit-learn lightgbm fastapi uvicorn httpx
+      - name: Harness lint, types and unit tests
+        working-directory: eval/harness
+        run: ruff check . && ruff format --check . && mypy && pytest -q
+      # Ten synthetic bugs through the real CLI with scripted comments; no model is called.
+      - run: make eval-smoke
+      # Includes the split-hygiene tests: training and evaluation repositories stay apart.
+      - name: Filter lint, types and unit tests
+        working-directory: services/filter
+        run: ruff check . && ruff format --check . && mypy && pytest -q
+      # A synthetic model served over HTTP and scored against through the real CLI.
+      - run: make filter-smoke

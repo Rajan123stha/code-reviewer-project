@@ -1,0 +1,70 @@
+{
+  "config": {
+    "strategy": "S0",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "9a23158388846cff",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S0",
+    "budget": 16000,
+    "estimatedTokens": 655,
+    "diffFiles": {
+      "included": [
+        "src/Tokenizer.js",
+        "src/rules.js",
+        "test/specs/new/del_strikethrough.html",
+        "test/specs/new/del_strikethrough.md"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1798,
+      "outputTokens": 1977,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 19848.2447,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "Nd_AaqK0Cdf1g8UPl76k8QQ"
+  },
+  "candidates": [],
+  "selected": [],
+  "startedAt": "2026-10-03T10:55:47.574Z",
+  "finishedAt": "2026-10-03T10:56:07.470Z"
+}

@@ -56,6 +56,30 @@ history, honest about its noise, and cheap to rebuild.
 small, actively maintained, permissively licensed, with commit messages that reference issues
 or pull requests. Large monorepos are left out for v1. All 22 clone into about 310 MB.
 
+## Result (manifest v1, built 2026-10-03)
+
+- **1,022 cases** from 22 repositories, covering **859 distinct review inputs**. Cases hash
+  `dd725ab4f8e05de1`. The build takes about 15 minutes.
+- 3,071 fix commits were considered. 2,049 were dropped:
+
+  | Reason                                               | Fix commits |
+  | ---------------------------------------------------- | ----------: |
+  | Fix touches no product source (tests, docs, build)   |         596 |
+  | Ambiguous provenance (top commit under 60% of lines) |         453 |
+  | Fix too large (over 120 changed lines)               |         361 |
+  | Nothing to blame (fix only adds lines)               |         317 |
+  | Introducing change too large                         |         275 |
+  | Fix touches too many files                           |          34 |
+  | Introduced by root or merge commit, or date order    |          13 |
+
+- Each repository is capped at 60 cases (newest fixes first); 11 repositories hit the cap.
+- Median time from introduction to fix: 197 days. Median ground truth: 1 line per case.
+- Relative to a 2026-01-01 cutoff: 772 cases fixed before it, 86 introduced after it, 164
+  straddling it.
+- A 100-case validation sample is drawn (`validation/sample-seed20261003-n100.json`). It has
+  not been labeled yet, so the label-noise rate is unknown. A first look at one case showed a
+  cosmetic "fix" (a placeholder URL changed), which is the kind of case labeling will reject.
+
 ## Validity threats
 
 - **SZZ is a heuristic.** Blame names the last commit to touch a line, which may be a refactor

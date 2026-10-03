@@ -4,9 +4,11 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 5, benchmark built.** Six context strategies review pull requests, and
-> Benchmark A (bug-introducing changes mined from real fix history) exists as a versioned
-> manifest. The eval harness and learned filter come next. See [docs/spec.md](docs/spec.md).
+> **Status: Phase 7, learned filter.** Six context strategies review pull requests, Benchmark A
+> (1,022 bug-introducing changes) is built, the harness runs and scores ablations over it, and
+> the usefulness filter (features, training, scoring service) is implemented. No ablation has
+> been run at full size and no filter has been trained on real data yet. See
+> [docs/spec.md](docs/spec.md).
 
 | Strategy | Context sent with the diff                                       |
 | -------- | ---------------------------------------------------------------- |
@@ -54,22 +56,25 @@ Only the `opened` and `synchronize` actions on `pull_request` start a review. Th
 
 ## Repository layout
 
-| Path                      | Contents                                                             |
-| ------------------------- | -------------------------------------------------------------------- |
-| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)            |
-| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews             |
-| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range  |
-| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`               |
-| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly    |
-| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost            |
-| `packages/db`             | Prisma schema, migrations, review persistence                        |
-| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing    |
-| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser   |
-| `eval/benchmark`          | Benchmark A builder (Python): fix mining, SZZ, manifests, validation |
-| `infra/`                  | docker-compose, Dockerfile, Postgres init                            |
-| `docs/`                   | Spec and ADRs                                                        |
+| Path                             | Contents                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| `apps/api`                       | Fastify webhook receiver (`/webhooks/github`, `/healthz`)                               |
+| `apps/worker`                    | BullMQ consumer that runs the pipeline and posts reviews                                |
+| `apps/cli`                       | `reviewlens review`: the same pipeline on a local diff or git range                     |
+| `packages/review-core`           | Strategies, prompts, validation, dedupe: `runReview()`                                  |
+| `packages/context-engine`        | tree-sitter parsing, symbol graph, diff mapping, context assembly                       |
+| `packages/llm`                   | Provider interface, Claude provider, retries, cache, cost                               |
+| `packages/db`                    | Prisma schema, migrations, review persistence                                           |
+| `packages/shared`                | Env parsing, logger, OpenTelemetry setup, queue contract, hashing                       |
+| `packages/github`                | Octokit App client, PR/compare/contents calls, unified-diff parser                      |
+| `eval/benchmark`                 | Benchmark A builder (Python): fix mining, SZZ, manifests, validation                    |
+| `eval/harness`                   | Eval harness (Python): experiment specs, runner, matching, metrics, statistics, reports |
+| `eval/notebooks`, `eval/results` | Ablation notebook; versioned experiment outputs                                         |
+| `services/filter`                | Learned usefulness filter (Python): dataset builder, training, FastAPI scoring service  |
+| `infra/`                         | docker-compose, Dockerfile, Postgres init                                               |
+| `docs/`                          | Spec and ADRs                                                                           |
 
-Later phases add `services/filter`, `eval/harness` and `apps/dashboard`.
+A later phase adds `apps/dashboard`.
 
 ## Prerequisites
 
@@ -186,6 +191,42 @@ python -m rlbench.cli sample --size 100 && python -m rlbench.cli label --sample 
 weaknesses of blame-based SZZ, and how to validate a sample.
 [ADR 0007](docs/adr/0007-benchmark-a.md) records the design.
 
+## Evaluation
+
+The harness runs strategy configurations over Benchmark A through the same pipeline as the
+worker, and scores them: bug-catch recall@k with bootstrap confidence intervals, paired
+comparisons between strategies, localization, comments per review, tokens, cost and latency.
+
+```sh
+make eval-smoke                          # synthetic end-to-end check; no model or network
+make eval EXPERIMENT=E1-strategies       # run or resume an experiment, then score it
+```
+
+Experiments E1 to E7 are YAML files in `eval/harness/experiments`. Runs are resumable and stop
+cleanly when the model's quota runs out. Results (`summary.json`, `report.md`, `pareto.png`) go
+to `eval/results/<experiment>/<spec hash>/`, and `eval/notebooks/ablation.ipynb` renders them.
+[eval/harness/README.md](eval/harness/README.md) has the matching rules and metric definitions;
+[ADR 0008](docs/adr/0008-eval-harness.md) records the design.
+
+## Learned filter
+
+Each candidate comment gets a usefulness score from a model trained on earlier reviews; comments
+below a threshold are dropped and the rest are posted in score order. The pipeline computes
+the features, and a small Python service (`services/filter`) scores them.
+
+```sh
+make filter-smoke                        # CLI and service end to end on a synthetic model
+make eval EXPERIMENT=F1-filter-data      # collect candidate comments from the training repos
+make filter-train                        # build the training set, cross-validate, save the model
+make filter-serve                        # serve it on http://127.0.0.1:8000
+```
+
+The filter is trained on 15 repositories and measured (experiment E5) on 7 others it never
+saw; the harness refuses to run E5 against a model trained on a repository under review.
+To use it in the worker, set `FILTER_URL` and `REVIEW_FILTER_THRESHOLD`.
+[services/filter/README.md](services/filter/README.md) has the features, labels and metrics;
+[ADR 0009](docs/adr/0009-learned-filter.md) records the design.
+
 ## Development
 
 ```sh
@@ -199,24 +240,26 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 
 ## Configuration
 
-| Variable                      | Used by | Default                  | Notes                                                     |
-| ----------------------------- | ------- | ------------------------ | --------------------------------------------------------- |
-| `GITHUB_WEBHOOK_SECRET`       | api     | (required)               | Must match the App's webhook secret                       |
-| `GITHUB_APP_ID`               | worker  | (required)               |                                                           |
-| `GITHUB_APP_PRIVATE_KEY_PATH` | worker  |                          | Path to the `.pem` file                                   |
-| `GITHUB_APP_PRIVATE_KEY`      | worker  |                          | Inline key; `\n` escapes allowed; preferred over the path |
-| `REDIS_URL`                   | both    | `redis://localhost:6379` |                                                           |
-| `PORT`, `HOST`                | api     | `3000`, `0.0.0.0`        |                                                           |
-| `WORKER_CONCURRENCY`          | worker  | `4`                      |                                                           |
-| `DATABASE_URL`                | worker  | (required)               | Postgres connection string                                |
-| `LLM_PROVIDER`                | worker  | `gemini`                 | `gemini` or `anthropic`                                   |
-| `GEMINI_API_KEYS`             | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited       |
-| `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                          |
-| `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                           |
-| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                   |
-| `INDEX_EMBEDDINGS`            | worker  | `false`                  | Embed indexed symbols into pgvector on each push          |
-| `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                   |
-| `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded       |
-| `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                |
-| `LOG_LEVEL`                   | both    | `info`                   |                                                           |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                        |
+| Variable                      | Used by | Default                  | Notes                                                        |
+| ----------------------------- | ------- | ------------------------ | ------------------------------------------------------------ |
+| `GITHUB_WEBHOOK_SECRET`       | api     | (required)               | Must match the App's webhook secret                          |
+| `GITHUB_APP_ID`               | worker  | (required)               |                                                              |
+| `GITHUB_APP_PRIVATE_KEY_PATH` | worker  |                          | Path to the `.pem` file                                      |
+| `GITHUB_APP_PRIVATE_KEY`      | worker  |                          | Inline key; `\n` escapes allowed; preferred over the path    |
+| `REDIS_URL`                   | both    | `redis://localhost:6379` |                                                              |
+| `PORT`, `HOST`                | api     | `3000`, `0.0.0.0`        |                                                              |
+| `WORKER_CONCURRENCY`          | worker  | `4`                      |                                                              |
+| `DATABASE_URL`                | worker  | (required)               | Postgres connection string                                   |
+| `LLM_PROVIDER`                | worker  | `gemini`                 | `gemini` or `anthropic`                                      |
+| `GEMINI_API_KEYS`             | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
+| `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                             |
+| `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                              |
+| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                      |
+| `INDEX_EMBEDDINGS`            | worker  | `false`                  | Embed indexed symbols into pgvector on each push             |
+| `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
+| `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
+| `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                   |
+| `FILTER_URL`                  | worker  | (unset)                  | Filter service base URL                                      |
+| `REVIEW_FILTER_THRESHOLD`     | worker  | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
+| `LOG_LEVEL`                   | both    | `info`                   |                                                              |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                           |

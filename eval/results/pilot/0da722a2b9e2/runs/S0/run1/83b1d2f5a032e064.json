@@ -1,0 +1,103 @@
+{
+  "config": {
+    "strategy": "S0",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "9a23158388846cff",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S0",
+    "budget": 16000,
+    "estimatedTokens": 1674,
+    "diffFiles": {
+      "included": [
+        "src/index.js",
+        "test/main.js",
+        "test/utils/server.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 2909,
+      "outputTokens": 2569,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 50369.1381,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "cN_Aasq9LqO1g8UPk4bkuQo"
+  },
+  "candidates": [
+    {
+      "file": "src/index.js",
+      "line": 301,
+      "category": "performance",
+      "severity": "high",
+      "claim": "Socket listeners ('data' and 'close') are never removed when a request successfully completes, leading to memory leaks and incorrect state behavior on reused sockets (Keep-Alive).",
+      "evidence": "request.on('socket', socket => {",
+      "suggested_fix": "Clean up the listeners registered on the `socket` object (both `'close'` and `'data'`) when the request or response successfully finishes, not just on `'abort'`. You can listen to the response's `'end'` event or the request's `'close'` / `'finish'` event to perform the cleanup.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Performance (high)**: Socket listeners ('data' and 'close') are never removed when a request successfully completes, leading to memory leaks and incorrect state behavior on reused sockets (Keep-Alive).\n\n> `request.on('socket', socket => {`\n\n**Suggested fix:** Clean up the listeners registered on the `socket` object (both `'close'` and `'data'`) when the request or response successfully finishes, not just on `'abort'`. You can listen to the response's `'end'` event or the request's `'close'` / `'finish'` event to perform the cleanup."
+    }
+  ],
+  "selected": [
+    {
+      "file": "src/index.js",
+      "line": 301,
+      "category": "performance",
+      "severity": "high",
+      "claim": "Socket listeners ('data' and 'close') are never removed when a request successfully completes, leading to memory leaks and incorrect state behavior on reused sockets (Keep-Alive).",
+      "evidence": "request.on('socket', socket => {",
+      "suggested_fix": "Clean up the listeners registered on the `socket` object (both `'close'` and `'data'`) when the request or response successfully finishes, not just on `'abort'`. You can listen to the response's `'end'` event or the request's `'close'` / `'finish'` event to perform the cleanup.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Performance (high)**: Socket listeners ('data' and 'close') are never removed when a request successfully completes, leading to memory leaks and incorrect state behavior on reused sockets (Keep-Alive).\n\n> `request.on('socket', socket => {`\n\n**Suggested fix:** Clean up the listeners registered on the `socket` object (both `'close'` and `'data'`) when the request or response successfully finishes, not just on `'abort'`. You can listen to the response's `'end'` event or the request's `'close'` / `'finish'` event to perform the cleanup."
+    }
+  ],
+  "startedAt": "2026-10-03T10:56:47.106Z",
+  "finishedAt": "2026-10-03T10:57:37.531Z"
+}

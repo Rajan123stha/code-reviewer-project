@@ -1,0 +1,24 @@
+name: E4-verifier
+description: >-
+  S4 with and without a second verifier pass that tries to refute each candidate comment.
+# The verifier pass is not built yet; the harness refuses to run this until it is.
+requires: [verifier]
+manifest: ../../benchmark/manifests/benchmark-a.v1.json
+cases:
+  sample: 60 # review inputs, sampled round-robin across repositories
+  seed: 1
+  exclude_invalid: true
+runs: 3 # repeats per arm, to measure LLM nondeterminism
+k: [1, 3, 5, 10]
+matching:
+  line_tolerance: 3
+# Held constant in every arm. One pinned model with no fallback, so every result is
+# attributable to it; low effort keeps a sweep affordable on free-tier quotas.
+base:
+  model: gemini-3.5-flash
+  fallbackModels: []
+  effort: low
+baseline: no-verifier
+arms:
+  - { id: no-verifier, strategy: S4, config: { verifier: false } }
+  - { id: verifier, strategy: S4, config: { verifier: true } }

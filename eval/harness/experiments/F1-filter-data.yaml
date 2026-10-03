@@ -1,0 +1,41 @@
+name: F1-filter-data
+description: >-
+  Candidate comments for training the learned filter: reviews of changes from the filter's
+  training repositories only. Not an ablation; its recall numbers are not reported.
+manifest: ../../benchmark/manifests/benchmark-a.v1.json
+cases:
+  sample: 60 # review inputs, sampled round-robin across repositories
+  seed: 7
+  exclude_invalid: true
+  # train_repos of eval/benchmark/splits/filter-split.v1.json. A test in services/filter
+  # fails if this list and the split file disagree.
+  repos:
+    - axios/axios
+    - cheeriojs/cheerio
+    - fastify/fastify
+    - hapijs/hapi
+    - iamkun/dayjs
+    - immerjs/immer
+    - knex/knex
+    - koajs/koa
+    - markedjs/marked
+    - mochajs/mocha
+    - node-fetch/node-fetch
+    - nodejs/undici
+    - pinojs/pino
+    - pmndrs/zustand
+    - sindresorhus/got
+runs: 1
+k: [1, 3, 5, 10]
+matching:
+  line_tolerance: 3
+base:
+  model: gemini-3.5-flash
+  fallbackModels: []
+  effort: low
+baseline: S4
+# S4 is the strategy E5 filters. S1 adds comments made without graph context, so the
+# `strategy` and `symbolCallers` features vary in the training data.
+arms:
+  - { id: S4, strategy: S4 }
+  - { id: S1, strategy: S1 }

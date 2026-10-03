@@ -1,10 +1,12 @@
 import { parseUnifiedDiff } from '@reviewlens/github';
 import type { LLMClient, TokenUsage } from '@reviewlens/llm';
-import type { ParseCache } from '@reviewlens/context-engine';
+import type { ParseCache, RepoGraph } from '@reviewlens/context-engine';
 import type { EmbeddingClient } from '@reviewlens/llm';
 import { configHash, strategyConfigSchema, type StrategyConfig } from './config.js';
 import { buildContext, isReviewable, type ContextStats } from './context.js';
 import { compareComments, findDuplicates } from './dedupe.js';
+import { FEATURES_VERSION, FeatureExtractor, type CandidateFeatures } from './features.js';
+import { assertScoreResult, type CommentScorer } from './filter.js';
 import { formatCommentBody } from './format.js';
 import { addExtraContext } from './graph-context.js';
 import type { ReviewInput } from './input.js';
@@ -16,10 +18,11 @@ import { DiffIndex, normalizePath, type RejectReason } from './validate.js';
 /**
  * - selected: valid, kept after dedupe, within maxComments; this is what gets posted.
  * - over_cap: valid and unique, but ranked below the maxComments cut.
+ * - filtered: valid and unique, but scored below the usefulness filter's threshold.
  * - duplicate: valid, but a near-duplicate of a higher-priority comment.
  * - invalid: failed validation (see rejectReason).
  */
-export type CandidateStatus = 'selected' | 'over_cap' | 'duplicate' | 'invalid';
+export type CandidateStatus = 'selected' | 'over_cap' | 'filtered' | 'duplicate' | 'invalid';
 
 export interface Candidate extends ModelComment {
   /** Position in the model's output, stable across processing. */
@@ -28,8 +31,12 @@ export interface Candidate extends ModelComment {
   rejectReason: RejectReason | null;
   /** For duplicates: index of the candidate this one duplicates. */
   duplicateOf: number | null;
-  /** 1-based rank among valid, unique candidates; null otherwise. */
+  /** 1-based rank among valid, unique candidates that passed the filter; null otherwise. */
   rank: number | null;
+  /** Filter inputs. Null for invalid candidates, which are never scored or posted. */
+  features: CandidateFeatures | null;
+  /** Usefulness score from the learned filter; null when the filter is off or did not score it. */
+  filterScore: number | null;
   /** Rendered GitHub comment body. */
   body: string;
 }
@@ -57,6 +64,9 @@ export interface ReviewRun {
   redactions: Record<string, number>;
   /** Null when the PR had nothing reviewable, so no call was made. */
   llm: LLMCallSummary | null;
+  featuresVersion: string;
+  /** The filter that scored this review; null when the filter is off or had nothing to score. */
+  filter: { modelVersion: string; threshold: number; scored: number; dropped: number } | null;
   candidates: Candidate[];
   /** Selected candidates in rank order: the comments to post. */
   selected: Candidate[];
@@ -72,6 +82,8 @@ export interface ReviewDeps {
   embeddings?: EmbeddingClient | undefined;
   /** Extra LLM cache-key material, e.g. the run index when an eval repeats a config. */
   cacheSalt?: string;
+  /** Usefulness filter; required when the config sets `filterThreshold`. */
+  scorer?: CommentScorer | undefined;
 }
 
 /**
@@ -85,6 +97,9 @@ export async function runReview(
 ): Promise<ReviewRun> {
   const startedAt = new Date().toISOString();
   strategyConfigSchema.parse(config);
+  if (config.filterThreshold !== null && !deps.scorer) {
+    throw new Error('config sets filterThreshold but no filter scorer was provided');
+  }
   if (deps.llm.providerName !== config.provider && deps.llm.providerName !== 'fake') {
     throw new Error(
       `config expects provider ${config.provider} but the LLM client uses ${deps.llm.providerName}`,
@@ -114,9 +129,10 @@ export async function runReview(
 
   // 2. Context for this strategy: diffs first, then strategy-specific extras.
   const context = buildContext(config.strategy, { files, headContents }, config.contextTokenBudget);
+  let graph: RepoGraph | null = null;
   if (context.sections.length > 0) {
     const included = new Set(context.stats.diffFiles.included);
-    await addExtraContext(context, {
+    graph = await addExtraContext(context, {
       scrub,
       embeddings: deps.embeddings,
       fixCommits: input.fixCommits,
@@ -135,11 +151,13 @@ export async function runReview(
     schemaName: REVIEW_SCHEMA_NAME,
     context: context.stats,
     redactions,
+    featuresVersion: FEATURES_VERSION,
   };
   if (context.sections.length === 0) {
     return {
       ...base,
       llm: null,
+      filter: null,
       candidates: [],
       selected: [],
       startedAt,
@@ -167,7 +185,7 @@ export async function runReview(
     cacheSalt: deps.cacheSalt,
   });
 
-  // 4. Validate, dedupe, rank, cap.
+  // 4. Validate and dedupe.
   const index = new DiffIndex(files, headContents);
   const comments = result.output.comments.map((c) => ({ ...c, file: normalizePath(c.file) }));
   const reasons = comments.map((c) => index.validate(c));
@@ -183,6 +201,8 @@ export async function runReview(
     rejectReason: reasons[i] ?? null,
     duplicateOf: null,
     rank: null,
+    features: null,
+    filterScore: null,
     body: formatCommentBody(c),
   }));
   validIdx.forEach((i, k) => {
@@ -192,7 +212,46 @@ export async function runReview(
       candidates[i]!.duplicateOf = validIdx[d]!;
     }
   });
-  unique.forEach((i, r) => {
+
+  // 5. Features for every valid candidate (duplicates too: they are training data), then
+  // the learned filter over the unique ones.
+  const clusterSize = new Map<number, number>();
+  validIdx.forEach((i, k) => {
+    const d = dupOf[k];
+    const kept = d === null || d === undefined ? i : validIdx[d]!;
+    clusterSize.set(kept, (clusterSize.get(kept) ?? 0) + 1);
+  });
+  const extractor = new FeatureExtractor(files, config.strategy, graph);
+  for (const i of validIdx) {
+    const kept = candidates[i]!.duplicateOf ?? i;
+    candidates[i]!.features = extractor.extract(comments[i]!, {
+      duplicateClusterSize: clusterSize.get(kept) ?? 1,
+      candidatesInReview: unique.length,
+    });
+  }
+
+  let filter: ReviewRun['filter'] = null;
+  let ranked = unique;
+  if (config.filterThreshold !== null && deps.scorer && unique.length > 0) {
+    const threshold = config.filterThreshold;
+    const scored = await deps.scorer.score(unique.map((i) => candidates[i]!.features!));
+    assertScoreResult(scored, { count: unique.length, model: config.filterModel });
+    unique.forEach((i, k) => (candidates[i]!.filterScore = scored.scores[k]!));
+    const score = (i: number) => candidates[i]!.filterScore!;
+    // `unique` is already in severity/confidence order, and the sort is stable, so equal
+    // scores keep that order.
+    ranked = unique.filter((i) => score(i) >= threshold).sort((i, j) => score(j) - score(i));
+    for (const i of unique) if (score(i) < threshold) candidates[i]!.status = 'filtered';
+    filter = {
+      modelVersion: scored.modelVersion,
+      threshold,
+      scored: unique.length,
+      dropped: unique.length - ranked.length,
+    };
+  }
+
+  // 6. Rank and cap.
+  ranked.forEach((i, r) => {
     candidates[i]!.rank = r + 1;
     candidates[i]!.status = r < config.maxComments ? 'selected' : 'over_cap';
   });
@@ -211,8 +270,9 @@ export async function runReview(
       cached: result.cached,
       requestId: result.requestId ?? null,
     },
+    filter,
     candidates,
-    selected: unique.slice(0, config.maxComments).map((i) => candidates[i]!),
+    selected: ranked.slice(0, config.maxComments).map((i) => candidates[i]!),
     startedAt,
     finishedAt: new Date().toISOString(),
   };

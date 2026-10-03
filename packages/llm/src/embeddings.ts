@@ -1,6 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { sha256 } from '@reviewlens/shared';
+import { sha256, writeFileAtomic } from '@reviewlens/shared';
 import { LLMError } from './errors.js';
 import type { GeminiKeyRunner } from './providers/gemini.js';
 
@@ -75,12 +75,11 @@ export class FileEmbeddingCache implements EmbeddingCache {
       (await this.shard(prefix))[k] = v;
       touched.add(prefix);
     }
-    await mkdir(this.dir, { recursive: true });
     for (const prefix of touched) {
-      const path = join(this.dir, `${prefix}.json`);
-      const tmp = `${path}.${process.pid}.tmp`;
-      await writeFile(tmp, JSON.stringify(await this.shard(prefix)));
-      await rename(tmp, path);
+      await writeFileAtomic(
+        join(this.dir, `${prefix}.json`),
+        JSON.stringify(await this.shard(prefix)),
+      );
     }
   }
 }

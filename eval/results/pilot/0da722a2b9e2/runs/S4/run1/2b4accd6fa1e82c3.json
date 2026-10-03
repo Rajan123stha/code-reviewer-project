@@ -1,0 +1,217 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "3409d2400b1f0368",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 5079,
+    "diffFiles": {
+      "included": [
+        "lib/helpers/schema/getPath.js",
+        "test/helpers/schema.getPath.test.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 988,
+        "filesIndexed": 369,
+        "parsed": 319,
+        "fromCache": 50,
+        "unreadable": 0,
+        "durationMs": 4316
+      },
+      "symbols": 1790,
+      "edges": 1617,
+      "callsResolved": 4326,
+      "callsTotal": 35080,
+      "changedSymbols": [
+        "lib/helpers/schema/getPath.js:<module>",
+        "test/helpers/schema.getPath.test.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/schema.js:readPref",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:Schema",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:aliasFields",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:gatherChildShemas",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:getMapPath",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:getPositionalPathType",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:getPositionalPath",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:setSafe",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:search",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schema.js:isArrayFilter",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/utils.js:clone",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/utils.js:options",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/utils.js:isPOJO",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/utils.js:expires",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/utils.js:getFunctionName",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 4342
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 6732,
+      "outputTokens": 2738,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 31670.1086,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "gd7Aao6vEve4g8UPg_-CiQo"
+  },
+  "candidates": [
+    {
+      "file": "lib/helpers/schema/getPath.js",
+      "line": 28,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "The `isArray` flag is never reset to `false` when traversing from a document array into a single-nested subdocument.",
+      "evidence": "if (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }",
+      "suggested_fix": "isArray = !!schematype.$isMongooseDocumentArray;",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: The `isArray` flag is never reset to `false` when traversing from a document array into a single-nested subdocument.\n\n```\nif (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }\n```\n\n**Suggested fix:** isArray = !!schematype.$isMongooseDocumentArray;"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/helpers/schema/getPath.js",
+      "line": 28,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "The `isArray` flag is never reset to `false` when traversing from a document array into a single-nested subdocument.",
+      "evidence": "if (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }",
+      "suggested_fix": "isArray = !!schematype.$isMongooseDocumentArray;",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: The `isArray` flag is never reset to `false` when traversing from a document array into a single-nested subdocument.\n\n```\nif (schematype.$isMongooseDocumentArray) {\n        isArray = true;\n      }\n```\n\n**Suggested fix:** isArray = !!schematype.$isMongooseDocumentArray;"
+    }
+  ],
+  "startedAt": "2026-10-03T10:52:43.337Z",
+  "finishedAt": "2026-10-03T10:53:19.380Z"
+}

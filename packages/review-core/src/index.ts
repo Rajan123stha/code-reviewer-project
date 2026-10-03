@@ -11,3 +11,6 @@ export * from './scrub.js';
 export * from './tokens.js';
 export * from './validate.js';
 export * from './graph-context.js';
+export * from './judge.js';
+export * from './features.js';
+export * from './filter.js';

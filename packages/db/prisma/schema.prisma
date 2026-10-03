@@ -93,6 +93,9 @@ model Review {
   latencyMs        Int?               @map("latency_ms")
   llmAttempts      Int?               @map("llm_attempts")
   llmRequestId     String?            @map("llm_request_id")
+  featuresVersion  String?            @map("features_version")
+  /// Version of the filter model that scored this review; null when the filter was off.
+  filterModel      String?            @map("filter_model")
   githubReviewId   BigInt?            @map("github_review_id")
   startedAt        DateTime           @default(now()) @map("started_at")
   finishedAt       DateTime?          @map("finished_at")
@@ -118,7 +121,9 @@ model CandidateComment {
   body             String
   llmConfidence    Float   @map("llm_confidence")
   filterScore      Float?  @map("filter_score")
-  /// selected | over_cap | duplicate | invalid
+  /// Filter inputs as computed by the pipeline; null for invalid candidates.
+  features         Json?   @map("features_json")
+  /// selected | over_cap | filtered | duplicate | invalid
   status           String
   rejectReason     String? @map("reject_reason")
   duplicateOfIndex Int?    @map("duplicate_of_index")

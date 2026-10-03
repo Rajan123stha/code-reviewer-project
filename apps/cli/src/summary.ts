@@ -52,6 +52,11 @@ export function summarize(run: ReviewRun): string {
     llm
       ? `llm: ${llm.servedModel}${llm.fallbackUsed ? ' (fallback)' : ''} · ${llm.usage.inputTokens} in / ${llm.usage.outputTokens} out · $${llm.costUsd?.toFixed(4) ?? '?'} · ${(llm.latencyMs / 1000).toFixed(1)}s${llm.cached ? ' (cached)' : ''}`
       : 'llm: not called (nothing reviewable)',
+    ...(run.filter
+      ? [
+          `filter: ${run.filter.modelVersion} at threshold ${run.filter.threshold}; dropped ${run.filter.dropped} of ${run.filter.scored}`,
+        ]
+      : []),
     `candidates: ${run.candidates.length} ${JSON.stringify(counts)}`,
     ...run.selected.map(
       (c) => `  #${c.rank} ${c.file}:${c.line} [${c.severity} ${c.category}] ${c.claim}`,

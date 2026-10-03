@@ -1,0 +1,121 @@
+{
+  "config": {
+    "strategy": "S0",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "9a23158388846cff",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S0",
+    "budget": 16000,
+    "estimatedTokens": 15880,
+    "diffFiles": {
+      "included": [
+        "docs/Reference/Reply.md",
+        "docs/Reference/Request.md",
+        "lib/contentTypeParser.js",
+        "lib/context.js",
+        "lib/error-handler.js",
+        "lib/handleRequest.js",
+        "lib/reply.js",
+        "lib/request.js",
+        "lib/route.js",
+        "lib/symbols.js",
+        "lib/warnings.js",
+        "test/context-config.test.js",
+        "test/handler-context.test.js",
+        "test/internals/contentTypeParser.test.js",
+        "test/internals/handleRequest.test.js",
+        "test/internals/reply-serialize.test.js",
+        "test/internals/reply.test.js",
+        "test/internals/request-validate.test.js",
+        "test/internals/request.test.js",
+        "test/plugin.test.js",
+        "test/router-options.test.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 18079,
+      "outputTokens": 1552,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 8616.2335,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "o97AasXLMa3Rg8UP4pyikAo"
+  },
+  "candidates": [
+    {
+      "file": "test/internals/request.test.js",
+      "line": 25,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Instantiating `Context` with a single options object instead of positional arguments will cause a crash when accessing properties of the undefined `server` parameter.",
+      "evidence": "const context = new Context({\n    schema: {\n      body: {",
+      "suggested_fix": "Since the `Context` constructor expects positional parameters (with `server` as the 8th argument), you should either construct a mock server object and pass the arguments positionally, or update the test helper to pass the required arguments in the correct positions.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (high)**: Instantiating `Context` with a single options object instead of positional arguments will cause a crash when accessing properties of the undefined `server` parameter.\n\n```\nconst context = new Context({\n    schema: {\n      body: {\n```\n\n**Suggested fix:** Since the `Context` constructor expects positional parameters (with `server` as the 8th argument), you should either construct a mock server object and pass the arguments positionally, or update the test helper to pass the required arguments in the correct positions."
+    }
+  ],
+  "selected": [
+    {
+      "file": "test/internals/request.test.js",
+      "line": 25,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Instantiating `Context` with a single options object instead of positional arguments will cause a crash when accessing properties of the undefined `server` parameter.",
+      "evidence": "const context = new Context({\n    schema: {\n      body: {",
+      "suggested_fix": "Since the `Context` constructor expects positional parameters (with `server` as the 8th argument), you should either construct a mock server object and pass the arguments positionally, or update the test helper to pass the required arguments in the correct positions.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (high)**: Instantiating `Context` with a single options object instead of positional arguments will cause a crash when accessing properties of the undefined `server` parameter.\n\n```\nconst context = new Context({\n    schema: {\n      body: {\n```\n\n**Suggested fix:** Since the `Context` constructor expects positional parameters (with `server` as the 8th argument), you should either construct a mock server object and pass the arguments positionally, or update the test helper to pass the required arguments in the correct positions."
+    }
+  ],
+  "startedAt": "2026-10-03T10:53:22.043Z",
+  "finishedAt": "2026-10-03T10:53:30.756Z"
+}

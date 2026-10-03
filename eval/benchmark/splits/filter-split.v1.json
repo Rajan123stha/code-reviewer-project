@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "purpose": "learned filter: train on train_repos, evaluate (E5) on test_repos",
+  "manifest_hash": "dd725ab4f8e05de1",
+  "seed": 20261004,
+  "test_share": 0.3333333333333333,
+  "train_repos": [
+    "axios/axios",
+    "cheeriojs/cheerio",
+    "fastify/fastify",
+    "hapijs/hapi",
+    "iamkun/dayjs",
+    "immerjs/immer",
+    "knex/knex",
+    "koajs/koa",
+    "markedjs/marked",
+    "mochajs/mocha",
+    "node-fetch/node-fetch",
+    "nodejs/undici",
+    "pinojs/pino",
+    "pmndrs/zustand",
+    "sindresorhus/got"
+  ],
+  "test_repos": [
+    "Automattic/mongoose",
+    "colinhacks/zod",
+    "expressjs/express",
+    "sindresorhus/execa",
+    "sindresorhus/ky",
+    "tj/commander.js",
+    "yargs/yargs"
+  ],
+  "cases": {
+    "train": 707,
+    "test": 315
+  }
+}

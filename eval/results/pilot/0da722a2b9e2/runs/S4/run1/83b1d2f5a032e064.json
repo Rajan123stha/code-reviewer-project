@@ -1,0 +1,202 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "refusalFallback": false
+  },
+  "configHash": "3409d2400b1f0368",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 6974,
+    "diffFiles": {
+      "included": [
+        "src/index.js",
+        "test/main.js",
+        "test/utils/server.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 51,
+        "filesIndexed": 23,
+        "parsed": 23,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 492
+      },
+      "symbols": 145,
+      "edges": 157,
+      "callsResolved": 403,
+      "callsTotal": 2075,
+      "changedSymbols": [
+        "src/index.js:fixResponseChunkedTransferBadEnding",
+        "src/index.js:fixResponseChunkedTransferBadEnding.onSocketClose",
+        "test/main.js:<module>",
+        "test/utils/server.js:TestServer.router"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "src/index.js:fixResponseChunkedTransferBadEnding",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "test/utils/server.js:TestServer.router",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "excerpt"
+        },
+        {
+          "name": "src/index.js:fetch",
+          "role": "callee",
+          "distance": 1,
+          "mode": "signature"
+        },
+        {
+          "name": "src/body.js:writeToStream",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/errors/fetch-error.js:FetchError",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/headers.js:Headers",
+          "role": "callee",
+          "distance": 2,
+          "mode": "signature"
+        },
+        {
+          "name": "src/headers.js:fromRawHeaders",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/request.js:Request",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/request.js:getNodeRequestOptions",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/response.js:Response",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "src/utils/is-redirect.js:isRedirect",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "test/main.js:testAbortController",
+          "role": "caller",
+          "distance": 2,
+          "mode": "signature"
+        }
+      ],
+      "signatureOnly": 3,
+      "omitted": 0,
+      "tokens": 5300
+    }
+  },
+  "redactions": {},
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 9913,
+      "outputTokens": 1896,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 11434.4519,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "pt_AapTgDaC3g8UPsODukAU"
+  },
+  "candidates": [
+    {
+      "file": "src/index.js",
+      "line": 317,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "Once `properLastChunkReceived` becomes true, any subsequent data events on the socket will overwrite it back to false, which can cause spurious 'Premature close' errors.",
+      "evidence": "properLastChunkReceived = Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;",
+      "suggested_fix": "properLastChunkReceived = properLastChunkReceived || Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;",
+      "confidence": 0.9,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: Once `properLastChunkReceived` becomes true, any subsequent data events on the socket will overwrite it back to false, which can cause spurious 'Premature close' errors.\n\n> `properLastChunkReceived = Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;`\n\n**Suggested fix:** properLastChunkReceived = properLastChunkReceived || Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;"
+    }
+  ],
+  "selected": [
+    {
+      "file": "src/index.js",
+      "line": 317,
+      "category": "bug",
+      "severity": "medium",
+      "claim": "Once `properLastChunkReceived` becomes true, any subsequent data events on the socket will overwrite it back to false, which can cause spurious 'Premature close' errors.",
+      "evidence": "properLastChunkReceived = Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;",
+      "suggested_fix": "properLastChunkReceived = properLastChunkReceived || Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;",
+      "confidence": 0.9,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "body": "**Bug (medium)**: Once `properLastChunkReceived` becomes true, any subsequent data events on the socket will overwrite it back to false, which can cause spurious 'Premature close' errors.\n\n> `properLastChunkReceived = Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;`\n\n**Suggested fix:** properLastChunkReceived = properLastChunkReceived || Buffer.compare(buf.slice(-5), LAST_CHUNK) === 0;"
+    }
+  ],
+  "startedAt": "2026-10-03T10:57:39.910Z",
+  "finishedAt": "2026-10-03T10:57:51.904Z"
+}

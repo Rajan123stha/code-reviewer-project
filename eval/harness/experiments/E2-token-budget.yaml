@@ -1,0 +1,24 @@
+name: E2-token-budget
+description: >-
+  Context token budget for S4, to separate how much context from which context (RQ2).
+manifest: ../../benchmark/manifests/benchmark-a.v1.json
+cases:
+  sample: 60 # review inputs, sampled round-robin across repositories
+  seed: 1
+  exclude_invalid: true
+runs: 3 # repeats per arm, to measure LLM nondeterminism
+k: [1, 3, 5, 10]
+matching:
+  line_tolerance: 3
+# Held constant in every arm. One pinned model with no fallback, so every result is
+# attributable to it; low effort keeps a sweep affordable on free-tier quotas.
+base:
+  model: gemini-3.5-flash
+  fallbackModels: []
+  effort: low
+baseline: budget-4k
+arms:
+  - { id: budget-4k, strategy: S4, config: { contextTokenBudget: 4000 } }
+  - { id: budget-8k, strategy: S4, config: { contextTokenBudget: 8000 } }
+  - { id: budget-16k, strategy: S4, config: { contextTokenBudget: 16000 } }
+  - { id: budget-32k, strategy: S4, config: { contextTokenBudget: 32000 } }
