@@ -4,9 +4,9 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 4, all six context strategies.** Pull requests are reviewed by Gemini (or
-> Claude) with a configurable context strategy. The benchmark, eval harness and learned filter
-> come next. See [docs/spec.md](docs/spec.md) for the full plan.
+> **Status: Phase 5, benchmark built.** Six context strategies review pull requests, and
+> Benchmark A (bug-introducing changes mined from real fix history) exists as a versioned
+> manifest. The eval harness and learned filter come next. See [docs/spec.md](docs/spec.md).
 
 | Strategy | Context sent with the diff                                       |
 | -------- | ---------------------------------------------------------------- |
@@ -54,21 +54,22 @@ Only the `opened` and `synchronize` actions on `pull_request` start a review. Th
 
 ## Repository layout
 
-| Path                      | Contents                                                            |
-| ------------------------- | ------------------------------------------------------------------- |
-| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)           |
-| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews            |
-| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range |
-| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`              |
-| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly   |
-| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost           |
-| `packages/db`             | Prisma schema, migrations, review persistence                       |
-| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing   |
-| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser  |
-| `infra/`                  | docker-compose, Dockerfile, Postgres init                           |
-| `docs/`                   | Spec and ADRs                                                       |
+| Path                      | Contents                                                             |
+| ------------------------- | -------------------------------------------------------------------- |
+| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)            |
+| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews             |
+| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range  |
+| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`               |
+| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly    |
+| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost            |
+| `packages/db`             | Prisma schema, migrations, review persistence                        |
+| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing    |
+| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser   |
+| `eval/benchmark`          | Benchmark A builder (Python): fix mining, SZZ, manifests, validation |
+| `infra/`                  | docker-compose, Dockerfile, Postgres init                            |
+| `docs/`                   | Spec and ADRs                                                        |
 
-Later phases add `services/filter`, `eval/` and `apps/dashboard`.
+Later phases add `services/filter`, `eval/harness` and `apps/dashboard`.
 
 ## Prerequisites
 
@@ -166,6 +167,24 @@ change (enclosing, callee, caller) and its graph distance.
 
 The summary goes to stderr and lists each selected comment and each rejected one with its
 reason.
+
+## Benchmark A
+
+Real changes that introduced a bug, with the lines a later fix corrected as ground truth. It is
+built from local git history by `rlbench`, a dependency-free Python package:
+
+```sh
+cd eval/benchmark
+export PYTHONPATH=src
+python -m rlbench.cli clone      # bare clones of the repositories in repos.json
+python -m rlbench.cli build      # mine fixes, run SZZ, write manifests/benchmark-a.v1.json
+python -m rlbench.cli stats --cutoff 2026-01-01
+python -m rlbench.cli sample --size 100 && python -m rlbench.cli label --sample validation/<file>
+```
+
+[eval/benchmark/README.md](eval/benchmark/README.md) explains how a case is made, the known
+weaknesses of blame-based SZZ, and how to validate a sample.
+[ADR 0007](docs/adr/0007-benchmark-a.md) records the design.
 
 ## Development
 

@@ -94,7 +94,12 @@ def build_repo_cases(
             dropped["fix_too_large"] += 1
             continue
 
-        blamed = szz.run(repo_dir, fix)
+        try:
+            blamed = szz.run(repo_dir, fix)
+        except git.GitError:
+            # A blame that fails or times out leaves the provenance unknown.
+            dropped["blame_failed"] += 1
+            continue
         if not blamed.lines:
             dropped["nothing_to_blame"] += 1
             continue

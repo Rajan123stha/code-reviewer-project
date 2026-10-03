@@ -2,6 +2,7 @@
 
 rlbench clone    clone the repositories in repos.json (bare, full history)
 rlbench build    mine fix commits, run SZZ, apply filters, write the manifest
+rlbench enrich   add issue labels and dates from the GitHub API (optional, needs a token)
 rlbench stats    summarize a manifest (per repository, drop reasons, date split)
 rlbench sample   draw a seeded validation sample
 rlbench label    show sampled cases one by one and record verdicts
@@ -22,6 +23,7 @@ from typing import Any
 
 from . import __version__, git, manifest, validation
 from .cases import BuildConfig, build_repo_cases, config_dict
+from .github_api import GitHubClient, enrich_case
 from .szz import METHOD
 
 HERE = Path(__file__).resolve().parents[2]
@@ -133,6 +135,26 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_enrich(args: argparse.Namespace) -> int:
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("GITHUB_TOKEN is not set; enrichment needs an authenticated client")
+        return 2
+    data = manifest.load(args.manifest)
+    client = GitHubClient(token, cache_dir().parent / "github")
+    for index, case in enumerate(data["cases"], 1):
+        enrich_case(case, client)
+        if index % 25 == 0:
+            print(f"enriched {index}/{len(data['cases'])} ({client.requests} requests)", flush=True)
+    data["enriched"] = {"source": "github-issues", "requests": client.requests}
+    data["cases_hash"] = manifest.content_hash(data)
+    manifest.save(data, args.out or args.manifest)
+    labeled = sum(1 for c in data["cases"] if c["fix"].get("bug_labeled"))
+    impossible = sum(1 for c in data["cases"] if c["provenance"].get("introduced_after_report"))
+    print(f"bug-labeled: {labeled}/{len(data['cases'])}; introduced after report: {impossible}")
+    return 0
+
+
 def cmd_stats(args: argparse.Namespace) -> int:
     data = manifest.load(args.manifest)
     cases = data["cases"]
@@ -239,6 +261,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--min-blame-share", type=float, default=defaults.min_blame_share)
     p.add_argument("--min-days-to-fix", type=float, default=defaults.min_days_to_fix)
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("enrich", help="add issue labels and dates (needs GITHUB_TOKEN)")
+    add_manifest(p)
+    p.add_argument("--out", type=Path)
+    p.set_defaults(func=cmd_enrich)
 
     p = sub.add_parser("stats", help="summarize a manifest")
     add_manifest(p)

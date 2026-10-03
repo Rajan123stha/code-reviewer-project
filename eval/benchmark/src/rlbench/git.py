@@ -20,12 +20,32 @@ class GitError(RuntimeError):
     pass
 
 
-def run(repo: Path | None, *args: str, check: bool = True) -> str:
+# A single git call that runs longer than this is abandoned (GitError). Blame with copy
+# detection can take minutes on a line whose history crosses a repository-wide rewrite.
+DEFAULT_TIMEOUT_SECONDS = 60.0
+
+
+def run(
+    repo: Path | None,
+    *args: str,
+    check: bool = True,
+    timeout: float | None = DEFAULT_TIMEOUT_SECONDS,
+) -> str:
     cmd = ["git"]
     if repo is not None:
         cmd += ["-C", str(repo)]
     cmd += list(args)
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise GitError(f"git {' '.join(args[:2])} timed out after {timeout:.0f} s") from error
     if check and proc.returncode != 0:
         raise GitError(f"git {' '.join(args[:3])} failed: {proc.stderr.strip()[:300]}")
     return proc.stdout
@@ -38,7 +58,17 @@ def version() -> str:
 def clone_bare(url: str, dest: Path) -> None:
     """Full-history bare clone of the default branch (blame needs every blob)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    run(None, "clone", "--bare", "--single-branch", "--no-tags", "--quiet", url, str(dest))
+    run(
+        None,
+        "clone",
+        "--bare",
+        "--single-branch",
+        "--no-tags",
+        "--quiet",
+        url,
+        str(dest),
+        timeout=None,
+    )
 
 
 def head_sha(repo: Path) -> str:
