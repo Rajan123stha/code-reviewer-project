@@ -31,3 +31,19 @@ jobs:
       # Build resolves workspace packages through their emitted .d.ts (not sources),
       # so it can catch type errors that typecheck does not.
       - run: pnpm build
+
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: eval/benchmark
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: pip install pytest ruff mypy
+      - run: ruff check . && ruff format --check .
+      - run: mypy
+      - run: pytest -q

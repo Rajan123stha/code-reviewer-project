@@ -11,3 +11,7 @@ __pycache__/
 .venv/
 packages/db/src/generated/
 .cache/
+eval/.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
