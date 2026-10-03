@@ -39,6 +39,8 @@ function run(): ReviewRun {
     rejectReason: null,
     duplicateOf: null,
     rank: 1,
+    features: null,
+    filterScore: 0.82,
     body: '**Bug (high)**: off by one',
   };
   return {
@@ -54,6 +56,8 @@ function run(): ReviewRun {
       fullFiles: { included: ['src/cart.ts'], omitted: [] },
     },
     redactions: {},
+    featuresVersion: 'features/v1',
+    filter: { modelVersion: 'lr-abc', threshold: 0.3, scored: 1, dropped: 0 },
     llm: {
       provider: 'anthropic',
       requestedModel: 'claude-opus-5-5',
