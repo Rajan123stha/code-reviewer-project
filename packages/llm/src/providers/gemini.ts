@@ -24,7 +24,8 @@ const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 /** The slice of the SDK this provider uses; tests pass a fake. */
 export interface GeminiModelsClient {
-  models: Pick<GoogleGenAI['models'], 'generateContent'>;
+  models: Pick<GoogleGenAI['models'], 'generateContent'> &
+    Partial<Pick<GoogleGenAI['models'], 'embedContent'>>;
 }
 
 export interface GeminiKeyEvent {
@@ -40,15 +41,20 @@ export interface GeminiModelEvent {
   reason: string;
 }
 
-export interface GeminiProviderOptions {
-  /** Notified when a model is skipped in favor of the next fallback model. */
-  onModelEvent?: (event: GeminiModelEvent) => void;
+export interface GeminiKeyOptions {
   apiKeys: readonly string[];
   /** Notified when a key is rotated out; never receives the key itself. */
   onKeyEvent?: (event: GeminiKeyEvent) => void;
   /** Injectable for tests. */
   clientFor?: (apiKey: string) => GeminiModelsClient;
   now?: () => number;
+}
+
+export interface GeminiProviderOptions extends GeminiKeyOptions {
+  /** Notified when a model is skipped in favor of the next fallback model. */
+  onModelEvent?: (event: GeminiModelEvent) => void;
+  /** Share one key runner (and its cooldown state) with other Gemini providers. */
+  keyRunner?: GeminiKeyRunner;
 }
 
 /**
@@ -64,23 +70,12 @@ export interface GeminiProviderOptions {
  */
 export class GeminiProvider implements LLMProvider {
   readonly name = 'gemini';
-  private readonly apiKeys: readonly string[];
-  private readonly pools = new Map<string, ApiKeyPool>();
+  private readonly keys: GeminiKeyRunner;
   private readonly onModelEvent: ((event: GeminiModelEvent) => void) | undefined;
-  private readonly clients = new Map<string, GeminiModelsClient>();
-  private readonly clientFor: (apiKey: string) => GeminiModelsClient;
-  private readonly onKeyEvent: ((event: GeminiKeyEvent) => void) | undefined;
-  private readonly now: () => number;
 
   constructor(options: GeminiProviderOptions) {
-    this.now = options.now ?? Date.now;
-    this.apiKeys = options.apiKeys;
-    new ApiKeyPool(options.apiKeys); // validates that there is at least one key
+    this.keys = options.keyRunner ?? new GeminiKeyRunner(options);
     this.onModelEvent = options.onModelEvent;
-    this.onKeyEvent = options.onKeyEvent;
-    this.clientFor =
-      options.clientFor ??
-      ((apiKey) => new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } }));
   }
 
   /**
@@ -127,14 +122,9 @@ export class GeminiProvider implements LLMProvider {
     signal: AbortSignal,
   ): Promise<ProviderResponse<T>> {
     const responseJsonSchema = toGeminiJsonSchema(request.schema);
-    const pool = this.poolFor(model);
-    for (;;) {
-      const key = pool.acquire();
-      if (!key) throw this.exhaustedError(pool, model);
-
-      let response;
-      try {
-        response = await this.client(key).models.generateContent({
+    {
+      const response = await this.keys.run(model, signal, (client) =>
+        client.models.generateContent({
           model,
           contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
           config: {
@@ -145,31 +135,8 @@ export class GeminiProvider implements LLMProvider {
             ...(request.effort ? { thinkingConfig: thinkingFor(model, request.effort) } : {}),
             abortSignal: signal,
           },
-        });
-      } catch (error) {
-        if (signal.aborted)
-          throw new LLMError('timeout', 'Gemini request aborted', { cause: error });
-        const info = describeGeminiError(error);
-        if (info.status === 429) {
-          const cooldownMs = info.daily
-            ? msUntilPacificMidnight(this.now())
-            : (info.retryDelayMs ?? DEFAULT_RATE_LIMIT_COOLDOWN_MS);
-          pool.cooldown(key, cooldownMs, info.quotaId ?? 'rate limited');
-          this.onKeyEvent?.({
-            key: key.label,
-            event: 'rate_limited',
-            reason: info.quotaId ?? info.message,
-            cooldownMs,
-          });
-          continue;
-        }
-        if (info.keyRejected) {
-          pool.disable(key, info.message);
-          this.onKeyEvent?.({ key: key.label, event: 'disabled', reason: info.message });
-          continue;
-        }
-        throw toLLMError(error, info);
-      }
+        }),
+      );
 
       const blocked = response.promptFeedback?.blockReason;
       if (blocked) throw new LLMError('refusal', `Gemini blocked the prompt (${blocked})`);
@@ -204,16 +171,37 @@ export class GeminiProvider implements LLMProvider {
     }
   }
 
-  private client(key: PoolKey): GeminiModelsClient {
-    let client = this.clients.get(key.label);
-    if (!client) {
-      client = this.clientFor(key.secret);
-      this.clients.set(key.label, client);
-    }
-    return client;
+  /** Key pool for one model (see GeminiKeyRunner). */
+  poolFor(model: string): ApiKeyPool {
+    return this.keys.poolFor(model);
+  }
+}
+
+/**
+ * Runs Gemini API calls over a rotating pool of API keys, shared by the chat and
+ * embedding providers. On a 429 the key cools down (for the server's RetryInfo delay, or
+ * until the daily reset) and the call moves to the next key; rejected keys are disabled.
+ * When no key is usable it throws rate_limit with the wait until the first key frees up.
+ * Cooldowns are tracked per model, because free-tier quotas are counted per model.
+ */
+export class GeminiKeyRunner {
+  private readonly apiKeys: readonly string[];
+  private readonly pools = new Map<string, ApiKeyPool>();
+  private readonly clients = new Map<string, GeminiModelsClient>();
+  private readonly clientFor: (apiKey: string) => GeminiModelsClient;
+  private readonly onKeyEvent: ((event: GeminiKeyEvent) => void) | undefined;
+  private readonly now: () => number;
+
+  constructor(options: GeminiKeyOptions) {
+    this.now = options.now ?? Date.now;
+    this.apiKeys = options.apiKeys;
+    new ApiKeyPool(options.apiKeys); // validates that there is at least one key
+    this.onKeyEvent = options.onKeyEvent;
+    this.clientFor =
+      options.clientFor ??
+      ((apiKey) => new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } }));
   }
 
-  /** Key pool for one model. Free-tier quotas are counted per model, so cooldowns are too. */
   poolFor(model: string): ApiKeyPool {
     let pool = this.pools.get(model);
     if (!pool) {
@@ -221,6 +209,54 @@ export class GeminiProvider implements LLMProvider {
       this.pools.set(model, pool);
     }
     return pool;
+  }
+
+  async run<R>(
+    model: string,
+    signal: AbortSignal,
+    call: (client: GeminiModelsClient) => Promise<R>,
+  ): Promise<R> {
+    const pool = this.poolFor(model);
+    for (;;) {
+      const key = pool.acquire();
+      if (!key) throw this.exhaustedError(pool, model);
+      try {
+        return await call(this.client(key));
+      } catch (error) {
+        if (signal.aborted) {
+          throw new LLMError('timeout', 'Gemini request aborted', { cause: error });
+        }
+        const info = describeGeminiError(error);
+        if (info.status === 429) {
+          const cooldownMs = info.daily
+            ? msUntilPacificMidnight(this.now())
+            : (info.retryDelayMs ?? DEFAULT_RATE_LIMIT_COOLDOWN_MS);
+          pool.cooldown(key, cooldownMs, info.quotaId ?? 'rate limited');
+          this.onKeyEvent?.({
+            key: key.label,
+            event: 'rate_limited',
+            reason: info.quotaId ?? info.message,
+            cooldownMs,
+          });
+          continue;
+        }
+        if (info.keyRejected) {
+          pool.disable(key, info.message);
+          this.onKeyEvent?.({ key: key.label, event: 'disabled', reason: info.message });
+          continue;
+        }
+        throw toLLMError(error, info);
+      }
+    }
+  }
+
+  private client(key: PoolKey): GeminiModelsClient {
+    let client = this.clients.get(key.label);
+    if (!client) {
+      client = this.clientFor(key.secret);
+      this.clients.set(key.label, client);
+    }
+    return client;
   }
 
   private exhaustedError(pool: ApiKeyPool, model: string): LLMError {
