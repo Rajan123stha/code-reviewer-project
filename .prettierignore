@@ -4,3 +4,9 @@ pnpm-lock.yaml
 packages/review-core/prompts/
 packages/db/src/generated/
 apps/cli/examples/
+eval/.venv/
+eval/benchmark/manifests/
+eval/benchmark/validation/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/

@@ -13,6 +13,11 @@ export interface GenerateRequest<T> {
   schemaName: string;
   maxOutputTokens: number;
   effort?: Effort | undefined;
+  /**
+   * Models to try, in order, when `model` is overloaded, unavailable or out of quota
+   * (Gemini). The model that answered is reported as `servedModel`.
+   */
+  fallbackModels?: readonly string[] | undefined;
   /** Let the provider re-run a policy-declined request on a fallback model. */
   refusalFallback?: boolean | undefined;
   /** Extra cache-key material, e.g. the run index when an eval repeats a config. */

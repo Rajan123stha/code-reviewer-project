@@ -60,3 +60,19 @@ to keep reviews working when one key reaches its rate limit by moving to another
 - **Eval comparability.** Results from Gemini and Claude are separate experiment arms (E6),
   not interchangeable. `gemini-flash-latest` can change under you, so pin a model for headline
   runs.
+
+## Amendment (2026-10-03): pinned default and model fallback
+
+The first real calls showed that Google's newest models are often overloaded on the free tier
+(`gemini-3.8-flash` and the `gemini-flash-latest` alias returned 503 on every attempt), while
+`gemini-3.5-flash` answered in 10 s.
+
+- The default model is now pinned to `gemini-3.8-flash` instead of the alias.
+- `StrategyConfig.fallbackModels` (default `["gemini-3.5-flash"]`) lists models to try, in
+  order, when a model is overloaded (5xx), unavailable to the account, or every key is out of
+  quota for it. A bad request or a refusal does not fall back.
+- Key cooldowns are tracked per model, because free-tier quotas are counted per model.
+- The model that answered is stored as `servedModel` with `fallbackUsed: true`. The fallback
+  list is part of the config hash and the LLM cache key.
+- For experiments that must be served by one model, set `fallbackModels` to `[]`
+  (`REVIEW_FALLBACK_MODELS=` or `--fallback-models ""`), or filter runs on `fallbackUsed`.

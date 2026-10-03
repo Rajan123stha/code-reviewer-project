@@ -1,8 +1,13 @@
 import {
   createDb,
+  addFixCommits,
   createReviewStore,
+  DbEmbeddingCache,
   DbParseCache,
+  knownFixCommits,
+  persistChunks,
   persistRepoIndex,
+  replaceConventions,
   upsertRepository,
 } from '@reviewlens/db';
 import { createGitHubApp, loadPrivateKey } from '@reviewlens/github';
@@ -39,8 +44,15 @@ const env = parseEnv(
     REVIEW_STRATEGY: z.enum(STRATEGY_IDS).default('S1'),
     /** Overrides the provider's default model, e.g. a pinned Gemini version. */
     REVIEW_MODEL: z.string().optional(),
+    /** Comma-separated; overrides the provider's default fallback models. Empty = none. */
+    REVIEW_FALLBACK_MODELS: z.string().optional(),
     /** Optional on-disk LLM response cache; useful when replaying the same PRs locally. */
     LLM_CACHE_DIR: z.string().optional(),
+    /** Embed every indexed symbol into pgvector at index time. Slow on free-tier keys. */
+    INDEX_EMBEDDINGS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   }),
 );
@@ -49,6 +61,13 @@ const logger = createLogger('worker', { level: env.LOG_LEVEL });
 const config = presetFor(env.REVIEW_STRATEGY, {
   provider: env.LLM_PROVIDER,
   ...(env.REVIEW_MODEL ? { model: env.REVIEW_MODEL } : {}),
+  ...(env.REVIEW_FALLBACK_MODELS !== undefined
+    ? {
+        fallbackModels: env.REVIEW_FALLBACK_MODELS.split(',')
+          .map((m) => m.trim())
+          .filter(Boolean),
+      }
+    : {}),
 });
 const github = createGitHubApp({
   appId: env.GITHUB_APP_ID,
@@ -61,11 +80,13 @@ const db = createDb(env.DATABASE_URL);
 const store = createReviewStore(db);
 const parseCache = new DbParseCache(db);
 // API keys are read here and never logged; key rotation events name keys as key#N.
-const { llm } = createLLMFromEnv(process.env, {
+const { llm, embeddings } = createLLMFromEnv(process.env, {
+  embeddingCache: new DbEmbeddingCache(db),
   provider: config.provider,
   cache: env.LLM_CACHE_DIR ? new FileCache(env.LLM_CACHE_DIR) : undefined,
   onCall: (call) => logger.info({ llmCall: call }, 'llm call'),
   onKeyEvent: (event) => logger.warn({ keyEvent: event }, 'llm api key rotated out'),
+  onModelEvent: (event) => logger.warn({ modelEvent: event }, 'llm model skipped; using fallback'),
 });
 
 const worker = new Worker<ReviewJobData, ReviewJobResult>(
@@ -76,6 +97,7 @@ const worker = new Worker<ReviewJobData, ReviewJobResult>(
       llm,
       store,
       parseCache,
+      embeddings,
       config,
       logger: logger.child({ jobId: job.id, attempt: job.attemptsMade + 1 }),
     }),
@@ -97,6 +119,19 @@ const indexWorker = new Worker<IndexJobData>(
       parseCache,
       upsertRepository: (ctx) => upsertRepository(db, ctx),
       persistIndex: (args) => persistRepoIndex(db, args),
+      replaceConventions: (id, conventions) => replaceConventions(db, id, conventions),
+      knownFixCommits: (id) => knownFixCommits(db, id),
+      addFixCommits: (id, fixes) => addFixCommits(db, id, fixes),
+      ...(env.INDEX_EMBEDDINGS && embeddings
+        ? {
+            chunkEmbeddings: {
+              client: embeddings,
+              model: config.embeddingModel,
+              dimensions: config.embeddingDimensions,
+              persistChunks: (args) => persistChunks(db, args),
+            },
+          }
+        : {}),
       logger: logger.child({ jobId: job.id }),
     }),
   {

@@ -4,11 +4,21 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 3, structural context.** Pull requests are reviewed by Gemini (or Claude)
-> with one of four context strategies: S0 (diff only), S1 (diff + changed files), S3 (diff +
-> changed symbols and what they call) and S4 (S3 + callers, to a configurable call-graph depth).
-> The symbol graph comes from tree-sitter parsing of TypeScript and JavaScript. See
-> [docs/spec.md](docs/spec.md) for the full plan.
+> **Status: Phase 5, benchmark built.** Six context strategies review pull requests, and
+> Benchmark A (bug-introducing changes mined from real fix history) exists as a versioned
+> manifest. The eval harness and learned filter come next. See [docs/spec.md](docs/spec.md).
+
+| Strategy | Context sent with the diff                                       |
+| -------- | ---------------------------------------------------------------- |
+| S0       | Nothing else                                                     |
+| S1       | Full changed files                                               |
+| S2       | The 10 symbols most similar to the change, by embedding          |
+| S3       | The changed symbols and the definitions they call                |
+| S4       | S3 plus callers and callees to a configurable call-graph depth   |
+| S5       | S4 plus repository conventions and past bug fixes in those files |
+
+Every strategy gets the same token budget, and each retrieval source is a separate switch in
+the strategy config.
 
 ## How it works today
 
@@ -44,21 +54,22 @@ Only the `opened` and `synchronize` actions on `pull_request` start a review. Th
 
 ## Repository layout
 
-| Path                      | Contents                                                            |
-| ------------------------- | ------------------------------------------------------------------- |
-| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)           |
-| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews            |
-| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range |
-| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`              |
-| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly   |
-| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost           |
-| `packages/db`             | Prisma schema, migrations, review persistence                       |
-| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing   |
-| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser  |
-| `infra/`                  | docker-compose, Dockerfile, Postgres init                           |
-| `docs/`                   | Spec and ADRs                                                       |
+| Path                      | Contents                                                             |
+| ------------------------- | -------------------------------------------------------------------- |
+| `apps/api`                | Fastify webhook receiver (`/webhooks/github`, `/healthz`)            |
+| `apps/worker`             | BullMQ consumer that runs the pipeline and posts reviews             |
+| `apps/cli`                | `reviewlens review`: the same pipeline on a local diff or git range  |
+| `packages/review-core`    | Strategies, prompts, validation, dedupe: `runReview()`               |
+| `packages/context-engine` | tree-sitter parsing, symbol graph, diff mapping, context assembly    |
+| `packages/llm`            | Provider interface, Claude provider, retries, cache, cost            |
+| `packages/db`             | Prisma schema, migrations, review persistence                        |
+| `packages/shared`         | Env parsing, logger, OpenTelemetry setup, queue contract, hashing    |
+| `packages/github`         | Octokit App client, PR/compare/contents calls, unified-diff parser   |
+| `eval/benchmark`          | Benchmark A builder (Python): fix mining, SZZ, manifests, validation |
+| `infra/`                  | docker-compose, Dockerfile, Postgres init                            |
+| `docs/`                   | Spec and ADRs                                                        |
 
-Later phases add `services/filter`, `eval/` and `apps/dashboard`.
+Later phases add `services/filter`, `eval/harness` and `apps/dashboard`.
 
 ## Prerequisites
 
@@ -140,6 +151,13 @@ pnpm review --diff apps/cli/examples/cart/change.diff --repo apps/cli/examples/c
 # A commit range in any local git repository, with call-graph context
 pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S4 --parse-cache .cache/parse
 
+# Embedding retrieval; the embedding cache makes later runs fast
+pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S2 \
+  --parse-cache .cache/parse --embed-cache .cache/embed
+
+# Conventions and past bug fixes (history is read up to the base commit only)
+pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S5 --parse-cache .cache/parse
+
 # Index a repository and print symbol/edge counts, timing and the most-called symbols
 pnpm reviewlens index --git ../some-repo --parse-cache .cache/parse
 ```
@@ -149,6 +167,24 @@ change (enclosing, callee, caller) and its graph distance.
 
 The summary goes to stderr and lists each selected comment and each rejected one with its
 reason.
+
+## Benchmark A
+
+Real changes that introduced a bug, with the lines a later fix corrected as ground truth. It is
+built from local git history by `rlbench`, a dependency-free Python package:
+
+```sh
+cd eval/benchmark
+export PYTHONPATH=src
+python -m rlbench.cli clone      # bare clones of the repositories in repos.json
+python -m rlbench.cli build      # mine fixes, run SZZ, write manifests/benchmark-a.v1.json
+python -m rlbench.cli stats --cutoff 2026-01-01
+python -m rlbench.cli sample --size 100 && python -m rlbench.cli label --sample validation/<file>
+```
+
+[eval/benchmark/README.md](eval/benchmark/README.md) explains how a case is made, the known
+weaknesses of blame-based SZZ, and how to validate a sample.
+[ADR 0007](docs/adr/0007-benchmark-a.md) records the design.
 
 ## Development
 
@@ -177,8 +213,10 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 | `GEMINI_API_KEYS`             | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited       |
 | `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                          |
 | `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                           |
-| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0`, `S1`, `S3` or `S4` (see Status above)               |
-| `REVIEW_MODEL`                | worker  | provider default         | `gemini-flash-latest` or `claude-opus-5-5`                |
+| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                   |
+| `INDEX_EMBEDDINGS`            | worker  | `false`                  | Embed indexed symbols into pgvector on each push          |
+| `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                   |
+| `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded       |
 | `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                |
 | `LOG_LEVEL`                   | both    | `info`                   |                                                           |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                        |

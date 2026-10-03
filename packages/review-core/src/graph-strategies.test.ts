@@ -71,7 +71,7 @@ describe('graph strategies', () => {
       '<symbol path="src/math.ts" name="round" kind="function" lines="1-4" relation="called by total">',
     );
     expect(prompt).not.toContain('src/checkout.ts');
-    expect(run.context.symbols).toMatchObject({
+    expect(run.context.graph).toMatchObject({
       changedSymbols: ['src/cart.ts:total'],
       index: { filesIndexed: 3, parsed: 3 },
     });

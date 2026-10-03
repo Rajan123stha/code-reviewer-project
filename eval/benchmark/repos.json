@@ -1,0 +1,27 @@
+{
+  "comment": "Benchmark A repository set. Criteria: TypeScript/JavaScript, actively maintained, permissive license, single-package or small repository, commit messages that reference issues or pull requests. Licenses are as declared by each project; `rlbench clone` records the LICENSE file's first line for checking.",
+  "repos": [
+    { "full_name": "sindresorhus/ky", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "sindresorhus/got", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "sindresorhus/execa", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "pinojs/pino", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "fastify/fastify", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "expressjs/express", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "koajs/koa", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "tj/commander.js", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "yargs/yargs", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "axios/axios", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "node-fetch/node-fetch", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "nodejs/undici", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "colinhacks/zod", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "iamkun/dayjs", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "pmndrs/zustand", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "immerjs/immer", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "markedjs/marked", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "cheeriojs/cheerio", "license": "MIT", "language": "TypeScript" },
+    { "full_name": "knex/knex", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "hapijs/hapi", "license": "BSD-3-Clause", "language": "JavaScript" },
+    { "full_name": "mochajs/mocha", "license": "MIT", "language": "JavaScript" },
+    { "full_name": "Automattic/mongoose", "license": "MIT", "language": "JavaScript" }
+  ]
+}

@@ -56,7 +56,7 @@ describe('runReview', () => {
 
     expect(run.configHash).toMatch(/^[0-9a-f]{16}$/);
     expect(run.prompt).toEqual({
-      version: 'review/v2',
+      version: PRESETS.S0.promptVersion,
       contentHash: expect.stringMatching(/^[0-9a-f]{12}$/) as unknown,
     });
     expect(run.schemaName).toBe('review-comments/v1');

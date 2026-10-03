@@ -1,11 +1,12 @@
 import { parseUnifiedDiff } from '@reviewlens/github';
 import type { LLMClient, TokenUsage } from '@reviewlens/llm';
 import type { ParseCache } from '@reviewlens/context-engine';
-import { configHash, strategyConfigSchema, usesGraph, type StrategyConfig } from './config.js';
+import type { EmbeddingClient } from '@reviewlens/llm';
+import { configHash, strategyConfigSchema, type StrategyConfig } from './config.js';
 import { buildContext, isReviewable, type ContextStats } from './context.js';
 import { compareComments, findDuplicates } from './dedupe.js';
 import { formatCommentBody } from './format.js';
-import { addSymbolContext } from './graph-context.js';
+import { addExtraContext } from './graph-context.js';
 import type { ReviewInput } from './input.js';
 import { loadPrompt, renderTemplate } from './prompts.js';
 import { REVIEW_SCHEMA_NAME, reviewOutputSchema, type ModelComment } from './schema.js';
@@ -67,6 +68,8 @@ export interface ReviewDeps {
   llm: LLMClient;
   /** Parse cache for graph strategies; content-addressed, so it never changes results. */
   parseCache?: ParseCache | undefined;
+  /** Embedding client for strategies that retrieve by similarity (S2). */
+  embeddings?: EmbeddingClient | undefined;
   /** Extra LLM cache-key material, e.g. the run index when an eval repeats a config. */
   cacheSalt?: string;
 }
@@ -111,9 +114,12 @@ export async function runReview(
 
   // 2. Context for this strategy: diffs first, then strategy-specific extras.
   const context = buildContext(config.strategy, { files, headContents }, config.contextTokenBudget);
-  if (usesGraph(config.strategy) && context.sections.length > 0) {
+  if (context.sections.length > 0) {
     const included = new Set(context.stats.diffFiles.included);
-    await addSymbolContext(context, {
+    await addExtraContext(context, {
+      scrub,
+      embeddings: deps.embeddings,
+      fixCommits: input.fixCommits,
       config,
       head: input.head,
       files: files.filter((f) => included.has(f.newPath)),
@@ -156,6 +162,7 @@ export async function runReview(
     schema: reviewOutputSchema,
     schemaName: REVIEW_SCHEMA_NAME,
     maxOutputTokens: config.maxOutputTokens,
+    fallbackModels: config.fallbackModels,
     refusalFallback: config.refusalFallback,
     cacheSalt: deps.cacheSalt,
   });

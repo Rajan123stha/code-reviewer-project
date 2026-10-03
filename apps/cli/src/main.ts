@@ -3,8 +3,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import {
   createLLMFromEnv,
+  EmbeddingClient,
+  FakeEmbeddingProvider,
   FakeProvider,
   FileCache,
+  FileEmbeddingCache,
   LLMClient,
   PROVIDER_NAMES,
   type ProviderName,
@@ -18,7 +21,9 @@ import {
   type StrategyId,
 } from '@reviewlens/review-core';
 import { buildRepoGraph, FileParseCache, MemoryParseCache } from '@reviewlens/context-engine';
+import { gitFixCommits } from './history.js';
 import { directorySnapshot, gitDiff, gitRevParse, gitSnapshot } from './snapshot.js';
+import { summarize } from './summary.js';
 
 const USAGE = `Usage:
   reviewlens review --diff <file.diff> --repo <dir>     review a diff against a working tree
@@ -27,10 +32,12 @@ const USAGE = `Usage:
   reviewlens index --repo <dir>                          index a working tree
 
 Options:
-  --strategy S0|S1|S3|S4  context strategy (default S1)
+  --strategy S0..S5     context strategy (default S1); see README for what each adds
   --parse-cache <dir>  on-disk parse cache for graph strategies and indexing
+  --embed-cache <dir>  on-disk embedding cache (S2)
   --provider <name>    gemini (default) or anthropic; default from LLM_PROVIDER
   --model <id>         override the provider's default model
+  --fallback-models <ids>  comma-separated models to try if the model is overloaded ("" = none)
   --budget <tokens>    override the context token budget
   --title <text>       PR title (default: "Local review")
   --body <text>        PR description
@@ -68,11 +75,13 @@ async function main() {
       strategy: { type: 'string', default: 'S1' },
       provider: { type: 'string' },
       model: { type: 'string' },
+      'fallback-models': { type: 'string' },
       budget: { type: 'string' },
       title: { type: 'string', default: 'Local review' },
       body: { type: 'string' },
       'cache-dir': { type: 'string' },
       'parse-cache': { type: 'string' },
+      'embed-cache': { type: 'string' },
       salt: { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
       out: { type: 'string' },
@@ -133,6 +142,14 @@ async function main() {
     ...presetFor(values.strategy as StrategyId, {
       provider: providerName,
       ...(values.model ? { model: values.model } : {}),
+      ...(values['fallback-models'] !== undefined
+        ? {
+            fallbackModels: values['fallback-models']
+              .split(',')
+              .map((m) => m.trim())
+              .filter(Boolean),
+          }
+        : {}),
     }),
     ...(values.budget ? { contextTokenBudget: Number(values.budget) } : {}),
   });
@@ -147,12 +164,14 @@ async function main() {
   };
   if (values.git) {
     if (!values.base || !values.head) throw new Error('--git needs --base and --head');
+    const repoDir = values.git;
     const baseSha = await gitRevParse(values.git, values.base);
     const headSha = await gitRevParse(values.git, values.head);
     input = {
       pr: { ...pr, baseSha, headSha },
       diff: await gitDiff(values.git, baseSha, headSha),
       head: gitSnapshot(values.git, headSha),
+      fixCommits: () => gitFixCommits(repoDir, baseSha),
     };
   } else if (values.diff && values.repo) {
     input = {
@@ -168,7 +187,23 @@ async function main() {
   let captured: { system: string; prompt: string } | undefined;
   const cache = values['cache-dir'] ? new FileCache(values['cache-dir']) : undefined;
   const onCall = (call: unknown) => console.error(`[llm] ${JSON.stringify(call)}`);
-  const llm = values['dry-run']
+  const embeddingCache = values['embed-cache']
+    ? new FileEmbeddingCache(values['embed-cache'])
+    : undefined;
+  const real = values['dry-run']
+    ? undefined
+    : createLLMFromEnv(process.env, {
+        provider: config.provider,
+        cache,
+        onCall,
+        embeddingCache,
+        onKeyEvent: (e) => console.error(`[keys] ${JSON.stringify(e)}`),
+        onModelEvent: (e) => console.error(`[model] ${JSON.stringify(e)}`),
+      });
+  const embeddings =
+    real?.embeddings ??
+    new EmbeddingClient({ provider: new FakeEmbeddingProvider(), cache: embeddingCache });
+  const llm = !real
     ? new LLMClient({
         provider: new FakeProvider(
           (req) => {
@@ -180,57 +215,22 @@ async function main() {
         cache,
         onCall,
       })
-    : createLLMFromEnv(process.env, {
-        provider: config.provider,
-        cache,
-        onCall,
-        onKeyEvent: (e) => console.error(`[keys] ${JSON.stringify(e)}`),
-      }).llm;
+    : real.llm;
 
   const run = await runReview(input, config, {
     llm,
     parseCache,
+    embeddings,
     ...(values.salt ? { cacheSalt: values.salt } : {}),
   });
 
   if (captured) {
     console.log(`===== SYSTEM =====\n${captured.system}\n\n===== USER =====\n${captured.prompt}`);
   }
-  console.error(summary(run));
+  console.error(summarize(run));
   const json = JSON.stringify(run, null, 2);
   if (values.out) await writeFile(values.out, json);
   else if (!captured) console.log(json);
-}
-
-function summary(run: Awaited<ReturnType<typeof runReview>>): string {
-  const counts: Record<string, number> = {};
-  for (const c of run.candidates) counts[c.status] = (counts[c.status] ?? 0) + 1;
-  const llm = run.llm;
-  const lines = [
-    `strategy ${run.config.strategy} · config ${run.configHash} · prompt ${run.prompt.version}@${run.prompt.contentHash}`,
-    `context: ~${run.context.estimatedTokens}/${run.context.budget} tokens; diffs ${run.context.diffFiles.included.length} in / ${run.context.diffFiles.omitted.length} out; files ${run.context.fullFiles.included.length} in / ${run.context.fullFiles.omitted.length} out`,
-    llm
-      ? `llm: ${llm.servedModel}${llm.fallbackUsed ? ' (fallback)' : ''} · ${llm.usage.inputTokens} in / ${llm.usage.outputTokens} out · $${llm.costUsd?.toFixed(4) ?? '?'} · ${(llm.latencyMs / 1000).toFixed(1)}s${llm.cached ? ' (cached)' : ''}`
-      : 'llm: not called (nothing reviewable)',
-    ...(run.context.symbols
-      ? [
-          `graph: ${run.context.symbols.index.filesIndexed} files (${run.context.symbols.index.parsed} parsed, ${run.context.symbols.index.fromCache} cached) in ${run.context.symbols.index.durationMs} ms; ${run.context.symbols.graph.symbols} symbols, ${run.context.symbols.graph.edges} edges, calls resolved ${run.context.symbols.graph.callsResolved}/${run.context.symbols.graph.callsTotal}`,
-          `symbols: changed ${run.context.symbols.changedSymbols.join(', ') || '(none)'}; shown ${run.context.symbols.included.length} (${run.context.symbols.signatureOnly} signature-only), omitted ${run.context.symbols.omitted}, ~${run.context.symbols.tokens} tokens`,
-          ...run.context.symbols.included.map(
-            (s) =>
-              `  ${s.distance} ${s.role.padEnd(9)} ${s.mode === 'signature' ? '(sig) ' : ''}${s.name}`,
-          ),
-        ]
-      : []),
-    `candidates: ${run.candidates.length} ${JSON.stringify(counts)}`,
-    ...run.selected.map(
-      (c) => `  #${c.rank} ${c.file}:${c.line} [${c.severity} ${c.category}] ${c.claim}`,
-    ),
-    ...run.candidates
-      .filter((c) => c.status === 'invalid')
-      .map((c) => `  rejected ${c.file}:${c.line} (${c.rejectReason}) ${c.claim}`),
-  ];
-  return lines.join('\n');
 }
 
 main().catch((error: unknown) => {

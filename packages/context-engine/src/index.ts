@@ -1,4 +1,7 @@
 export * from './assemble.js';
+export * from './bug-history.js';
+export * from './chunks.js';
+export * from './conventions.js';
 export * from './diff-map.js';
 export * from './graph.js';
 export * from './indexer.js';
