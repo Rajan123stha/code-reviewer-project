@@ -4,11 +4,21 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 3, structural context.** Pull requests are reviewed by Gemini (or Claude)
-> with one of four context strategies: S0 (diff only), S1 (diff + changed files), S3 (diff +
-> changed symbols and what they call) and S4 (S3 + callers, to a configurable call-graph depth).
-> The symbol graph comes from tree-sitter parsing of TypeScript and JavaScript. See
-> [docs/spec.md](docs/spec.md) for the full plan.
+> **Status: Phase 4, all six context strategies.** Pull requests are reviewed by Gemini (or
+> Claude) with a configurable context strategy. The benchmark, eval harness and learned filter
+> come next. See [docs/spec.md](docs/spec.md) for the full plan.
+
+| Strategy | Context sent with the diff                                       |
+| -------- | ---------------------------------------------------------------- |
+| S0       | Nothing else                                                     |
+| S1       | Full changed files                                               |
+| S2       | The 10 symbols most similar to the change, by embedding          |
+| S3       | The changed symbols and the definitions they call                |
+| S4       | S3 plus callers and callees to a configurable call-graph depth   |
+| S5       | S4 plus repository conventions and past bug fixes in those files |
+
+Every strategy gets the same token budget, and each retrieval source is a separate switch in
+the strategy config.
 
 ## How it works today
 
@@ -140,6 +150,13 @@ pnpm review --diff apps/cli/examples/cart/change.diff --repo apps/cli/examples/c
 # A commit range in any local git repository, with call-graph context
 pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S4 --parse-cache .cache/parse
 
+# Embedding retrieval; the embedding cache makes later runs fast
+pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S2 \
+  --parse-cache .cache/parse --embed-cache .cache/embed
+
+# Conventions and past bug fixes (history is read up to the base commit only)
+pnpm review --git ../some-repo --base HEAD~1 --head HEAD --strategy S5 --parse-cache .cache/parse
+
 # Index a repository and print symbol/edge counts, timing and the most-called symbols
 pnpm reviewlens index --git ../some-repo --parse-cache .cache/parse
 ```
@@ -177,7 +194,8 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 | `GEMINI_API_KEYS`             | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited       |
 | `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                          |
 | `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                           |
-| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0`, `S1`, `S3` or `S4` (see Status above)               |
+| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                   |
+| `INDEX_EMBEDDINGS`            | worker  | `false`                  | Embed indexed symbols into pgvector on each push          |
 | `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                   |
 | `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded       |
 | `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                |

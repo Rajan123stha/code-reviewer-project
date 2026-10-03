@@ -1,6 +1,7 @@
 // Test helper; not exported from the package index.
 import { readdir, readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
+import { vector } from '@electric-sql/pglite-pgvector';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { createDb, type Db } from './client.js';
@@ -18,7 +19,7 @@ export function useTestDb(): () => Db {
   let db: Db;
 
   beforeAll(async () => {
-    pglite = await PGlite.create();
+    pglite = await PGlite.create({ extensions: { vector } });
     const dirs = (await readdir(MIGRATIONS, { withFileTypes: true })).filter((d) =>
       d.isDirectory(),
     );
@@ -41,7 +42,7 @@ export function useTestDb(): () => Db {
 
   beforeEach(async () => {
     await db.$executeRawUnsafe(
-      'TRUNCATE edges, symbols, files, parsed_blobs, candidate_comments, reviews, pull_requests, repositories, installations RESTART IDENTITY CASCADE',
+      'TRUNCATE chunks, bug_history, conventions, embedding_cache, edges, symbols, files, parsed_blobs, candidate_comments, reviews, pull_requests, repositories, installations RESTART IDENTITY CASCADE',
     );
   });
 

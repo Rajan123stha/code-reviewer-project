@@ -35,6 +35,8 @@ model Repository {
   pullRequests   PullRequest[]
   files          RepoFile[]
   edges          SymbolEdge[]
+  conventions    Convention[]
+  bugHistory     BugHistory[]
 
   @@index([installationId])
   @@map("repositories")
@@ -167,6 +169,7 @@ model CodeSymbol {
   exported       Boolean
   parentSymbolId Int?         @map("parent_symbol_id")
   file           RepoFile     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  chunk          Chunk?
   outgoing       SymbolEdge[] @relation("edge_src")
   incoming       SymbolEdge[] @relation("edge_dst")
 
@@ -190,4 +193,57 @@ model SymbolEdge {
   @@index([srcSymbolId])
   @@index([dstSymbolId])
   @@map("edges")
+}
+
+/// Content-addressed embedding cache: key = hash(provider, model, size, kind, text).
+model EmbeddingCacheEntry {
+  key       String   @id
+  vector    Float[]  @db.Real
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("embedding_cache")
+}
+
+/// Rules a repository states or enforces, extracted at the indexed commit.
+model Convention {
+  id           Int        @id @default(autoincrement())
+  repositoryId Int        @map("repo_id")
+  ruleText     String     @map("rule_text")
+  source       String
+  kind         String
+  evidence     Json       @map("evidence_json")
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId])
+  @@map("conventions")
+}
+
+/// Bug-fix commits on the default branch, for past-bug retrieval. bug_commit_sha is
+/// filled by SZZ (Phase 5); retrieval only needs the fix.
+model BugHistory {
+  id           Int        @id @default(autoincrement())
+  repositoryId Int        @map("repo_id")
+  fixCommitSha String     @map("fix_commit_sha")
+  bugCommitSha String?    @map("bug_commit_sha")
+  committedAt  DateTime   @map("committed_at")
+  files        Json       @map("files_json")
+  summary      String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, fixCommitSha])
+  @@index([repositoryId, committedAt])
+  @@map("bug_history")
+}
+
+/// Symbol-level chunks of the default-branch index with their embeddings (pgvector), for
+/// nearest-neighbor queries in SQL. Reviews rank in memory from the embedding cache.
+model Chunk {
+  id        Int                         @id @default(autoincrement())
+  symbolId  Int                         @unique @map("symbol_id")
+  textHash  String                      @map("text_hash")
+  model     String
+  embedding Unsupported("vector(768)")?
+  symbol    CodeSymbol                  @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  @@map("chunks")
 }

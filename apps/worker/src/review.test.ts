@@ -75,6 +75,7 @@ function fakeStore(start: StartReviewResult = { reviewId: 1, alreadyPosted: fals
     completeReview: vi.fn(async (_id: number, run: ReviewRun) => void runs.push(run)),
     markPosted: vi.fn(async () => {}),
     markFailed: vi.fn(async () => {}),
+    fixCommitsBefore: vi.fn(async () => []),
   } satisfies ReviewStore;
   return { store, runs };
 }

@@ -1,5 +1,7 @@
 import type { ReviewRun, StrategyConfig } from '@reviewlens/review-core';
+import type { FixCommit } from '@reviewlens/context-engine';
 import type { Db } from './client.js';
+import { fixCommitsBefore } from './knowledge.js';
 import type { Prisma } from './generated/prisma/client.js';
 
 export interface PullRequestContext {
@@ -184,6 +186,8 @@ export interface ReviewStore {
   completeReview(reviewId: number, run: ReviewRun): Promise<void>;
   markPosted(reviewId: number, githubReviewId: number | null): Promise<void>;
   markFailed(reviewId: number, error: unknown): Promise<void>;
+  /** Stored fix commits of a repository (by GitHub id) committed before a date. */
+  fixCommitsBefore(githubRepoId: number, before: Date): Promise<FixCommit[]>;
 }
 
 export function createReviewStore(db: Db): ReviewStore {
@@ -193,5 +197,6 @@ export function createReviewStore(db: Db): ReviewStore {
     completeReview: (id, run) => completeReview(db, id, run),
     markPosted: (id, ghId) => markPosted(db, id, ghId),
     markFailed: (id, err) => markFailed(db, id, err),
+    fixCommitsBefore: (repoId, before) => fixCommitsBefore(db, repoId, before),
   };
 }

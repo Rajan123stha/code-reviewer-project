@@ -2,12 +2,13 @@ import type { ParseCache } from '@reviewlens/context-engine';
 import type { ReviewStore } from '@reviewlens/db';
 import {
   createReview,
+  fetchCommitDate,
   fetchCompareDiff,
   fetchPullRequest,
   githubSnapshot,
   type GitHubClient,
 } from '@reviewlens/github';
-import { LLMError, type LLMClient } from '@reviewlens/llm';
+import { LLMError, type EmbeddingClient, type LLMClient } from '@reviewlens/llm';
 import {
   configHash,
   formatReviewBody,
@@ -24,8 +25,10 @@ export interface ReviewDeps {
   getClient(installationId: number): Promise<GitHubClient>;
   llm: LLMClient;
   store: ReviewStore;
-  /** Parse cache for graph strategies (S3, S4). */
+  /** Parse cache for graph strategies. */
   parseCache?: ParseCache | undefined;
+  /** Embedding client for S2. */
+  embeddings?: EmbeddingClient | undefined;
   config: StrategyConfig;
   logger: Logger;
 }
@@ -106,9 +109,19 @@ export async function processReviewJob(
             },
             diff,
             head: githubSnapshot(client, repo, job.headSha),
+            // Only fixes committed before the base commit: the review must not see the future.
+            ...(deps.config.usePastBugs
+              ? {
+                  fixCommits: async () =>
+                    deps.store.fixCommitsBefore(
+                      job.repositoryId,
+                      new Date(await fetchCommitDate(client, repo, job.baseSha)),
+                    ),
+                }
+              : {}),
           },
           deps.config,
-          { llm: deps.llm, parseCache: deps.parseCache },
+          { llm: deps.llm, parseCache: deps.parseCache, embeddings: deps.embeddings },
         );
         await deps.store.completeReview(reviewId, run);
 

@@ -20,11 +20,13 @@
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "@reviewlens/context-engine": "workspace:*",
+    "@reviewlens/llm": "workspace:*",
     "@reviewlens/review-core": "workspace:*",
     "pg": "^8.23.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-pgvector": "^0.0.9",
     "@electric-sql/pglite-socket": "^0.2.11",
     "@types/pg": "^8.23.1",
     "prisma": "7.10.0"

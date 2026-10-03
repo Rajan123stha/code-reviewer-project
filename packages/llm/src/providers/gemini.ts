@@ -21,6 +21,8 @@ export const DEFAULT_GEMINI_FALLBACK_MODELS: readonly string[] = ['gemini-3.5-fl
 
 /** Fallback wait when a 429 carries no RetryInfo. Free-tier limits are per minute. */
 const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 60_000;
+/** The API sometimes answers a 429 with a 0 s retry delay; never retry a key instantly. */
+const MIN_RATE_LIMIT_COOLDOWN_MS = 5_000;
 
 /** The slice of the SDK this provider uses; tests pass a fake. */
 export interface GeminiModelsClient {
@@ -230,7 +232,10 @@ export class GeminiKeyRunner {
         if (info.status === 429) {
           const cooldownMs = info.daily
             ? msUntilPacificMidnight(this.now())
-            : (info.retryDelayMs ?? DEFAULT_RATE_LIMIT_COOLDOWN_MS);
+            : Math.max(
+                MIN_RATE_LIMIT_COOLDOWN_MS,
+                info.retryDelayMs ?? DEFAULT_RATE_LIMIT_COOLDOWN_MS,
+              );
           pool.cooldown(key, cooldownMs, info.quotaId ?? 'rate limited');
           this.onKeyEvent?.({
             key: key.label,
