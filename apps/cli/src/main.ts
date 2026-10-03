@@ -18,6 +18,7 @@ import {
   type ProviderName,
 } from '@reviewlens/llm';
 import {
+  HttpCommentScorer,
   judgeComment,
   presetFor,
   STRATEGY_IDS,
@@ -50,6 +51,8 @@ Review options:
   --salt <text>         cache salt, e.g. a run index for repeated eval runs
   --dry-run             print the prompt; make no LLM call
   --fake-llm <file>     answer with the comments in this JSON file instead of calling a model
+  --filter-url <url>    filter service, used when the config sets filterThreshold
+                        (default: FILTER_URL)
   --out <file>          write the full run as JSON (default: stdout)
 
 Caches (all optional):
@@ -105,6 +108,7 @@ function parse() {
       salt: { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
       'fake-llm': { type: 'string' },
+      'filter-url': { type: 'string' },
       in: { type: 'string' },
       out: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
@@ -257,12 +261,14 @@ async function review(values: Values) {
       new EmbeddingClient({ provider: new FakeEmbeddingProvider(), cache: embeddingCache });
   }
 
+  const filterUrl = values['filter-url'] ?? process.env.FILTER_URL;
   const run = await runReview(input, config, {
     llm,
     parseCache: values['parse-cache']
       ? new FileParseCache(values['parse-cache'])
       : new MemoryParseCache(),
     embeddings,
+    ...(filterUrl ? { scorer: new HttpCommentScorer({ url: filterUrl }) } : {}),
     ...(values.salt ? { cacheSalt: values.salt } : {}),
   });
 

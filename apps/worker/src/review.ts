@@ -13,6 +13,7 @@ import {
   configHash,
   formatReviewBody,
   runReview,
+  type CommentScorer,
   type StrategyConfig,
 } from '@reviewlens/review-core';
 import { withSpan, type Logger, type ReviewJobData } from '@reviewlens/shared';
@@ -29,6 +30,8 @@ export interface ReviewDeps {
   parseCache?: ParseCache | undefined;
   /** Embedding client for S2. */
   embeddings?: EmbeddingClient | undefined;
+  /** Usefulness filter; required when the config sets a filter threshold. */
+  scorer?: CommentScorer | undefined;
   config: StrategyConfig;
   logger: Logger;
 }
@@ -121,7 +124,12 @@ export async function processReviewJob(
               : {}),
           },
           deps.config,
-          { llm: deps.llm, parseCache: deps.parseCache, embeddings: deps.embeddings },
+          {
+            llm: deps.llm,
+            parseCache: deps.parseCache,
+            embeddings: deps.embeddings,
+            scorer: deps.scorer,
+          },
         );
         await deps.store.completeReview(reviewId, run);
 

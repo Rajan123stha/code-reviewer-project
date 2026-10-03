@@ -12,7 +12,12 @@ import {
 } from '@reviewlens/db';
 import { createGitHubApp, loadPrivateKey } from '@reviewlens/github';
 import { createLLMFromEnv, FileCache, PROVIDER_NAMES } from '@reviewlens/llm';
-import { presetFor, STRATEGY_IDS } from '@reviewlens/review-core';
+import {
+  HttpCommentScorer,
+  presetFor,
+  STRATEGY_IDS,
+  type StrategyConfig,
+} from '@reviewlens/review-core';
 import {
   createLogger,
   logEnv,
@@ -53,22 +58,33 @@ const env = parseEnv(
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    /** Filter service base URL. With REVIEW_FILTER_THRESHOLD, turns the learned filter on. */
+    FILTER_URL: z.string().url().optional(),
+    /** Drop comments the filter scores below this (0 to 1). Unset: filter off. */
+    REVIEW_FILTER_THRESHOLD: z.coerce.number().min(0).max(1).optional(),
     WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   }),
 );
 
 const logger = createLogger('worker', { level: env.LOG_LEVEL });
-const config = presetFor(env.REVIEW_STRATEGY, {
-  provider: env.LLM_PROVIDER,
-  ...(env.REVIEW_MODEL ? { model: env.REVIEW_MODEL } : {}),
-  ...(env.REVIEW_FALLBACK_MODELS !== undefined
-    ? {
-        fallbackModels: env.REVIEW_FALLBACK_MODELS.split(',')
-          .map((m) => m.trim())
-          .filter(Boolean),
-      }
-    : {}),
-});
+if (env.REVIEW_FILTER_THRESHOLD !== undefined && !env.FILTER_URL) {
+  throw new Error('REVIEW_FILTER_THRESHOLD is set but FILTER_URL is not');
+}
+const config: StrategyConfig = {
+  ...presetFor(env.REVIEW_STRATEGY, {
+    provider: env.LLM_PROVIDER,
+    ...(env.REVIEW_MODEL ? { model: env.REVIEW_MODEL } : {}),
+    ...(env.REVIEW_FALLBACK_MODELS !== undefined
+      ? {
+          fallbackModels: env.REVIEW_FALLBACK_MODELS.split(',')
+            .map((m) => m.trim())
+            .filter(Boolean),
+        }
+      : {}),
+  }),
+  filterThreshold: env.REVIEW_FILTER_THRESHOLD ?? null,
+};
+const scorer = env.FILTER_URL ? new HttpCommentScorer({ url: env.FILTER_URL }) : undefined;
 const github = createGitHubApp({
   appId: env.GITHUB_APP_ID,
   privateKey: loadPrivateKey({
@@ -98,6 +114,7 @@ const worker = new Worker<ReviewJobData, ReviewJobResult>(
       store,
       parseCache,
       embeddings,
+      scorer,
       config,
       logger: logger.child({ jobId: job.id, attempt: job.attemptsMade + 1 }),
     }),
