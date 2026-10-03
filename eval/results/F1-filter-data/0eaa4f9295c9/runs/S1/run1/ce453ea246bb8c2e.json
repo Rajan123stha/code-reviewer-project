@@ -1,0 +1,156 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 3543,
+    "diffFiles": {
+      "included": [
+        "lib/core/Axios.js",
+        "test/unit/adapters/http.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "lib/core/Axios.js"
+      ],
+      "omitted": [
+        "test/unit/adapters/http.js"
+      ]
+    }
+  },
+  "redactions": {
+    "url-credentials": 1
+  },
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 4528,
+      "outputTokens": 1480,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 8118.7116,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "jQzBaqL8PIK5g8UPpZbPwQk"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/core/Axios.js",
+      "line": 51,
+      "category": "error-handling",
+      "severity": "high",
+      "claim": "Writing to `err.stack` can throw a TypeError in strict mode if the error object is frozen or has a read-only stack property, crashing the entire request flow.",
+      "evidence": "err.stack = stack;",
+      "suggested_fix": "Wrap the stack modification logic in a `try...catch` block to ensure that any failure to modify the stack trace does not prevent the original error from being thrown.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "error-handling",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 158,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 25,
+        "prChangedLines": 56,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Error handling (high)**: Writing to `err.stack` can throw a TypeError in strict mode if the error object is frozen or has a read-only stack property, crashing the entire request flow.\n\n> `err.stack = stack;`\n\n**Suggested fix:** Wrap the stack modification logic in a `try...catch` block to ensure that any failure to modify the stack trace does not prevent the original error from being thrown."
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/core/Axios.js",
+      "line": 51,
+      "category": "error-handling",
+      "severity": "high",
+      "claim": "Writing to `err.stack` can throw a TypeError in strict mode if the error object is frozen or has a read-only stack property, crashing the entire request flow.",
+      "evidence": "err.stack = stack;",
+      "suggested_fix": "Wrap the stack modification logic in a `try...catch` block to ensure that any failure to modify the stack trace does not prevent the original error from being thrown.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "error-handling",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 158,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 25,
+        "prChangedLines": 56,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Error handling (high)**: Writing to `err.stack` can throw a TypeError in strict mode if the error object is frozen or has a read-only stack property, crashing the entire request flow.\n\n> `err.stack = stack;`\n\n**Suggested fix:** Wrap the stack modification logic in a `try...catch` block to ensure that any failure to modify the stack trace does not prevent the original error from being thrown."
+    }
+  ],
+  "startedAt": "2026-10-03T14:09:16.321Z",
+  "finishedAt": "2026-10-03T14:09:24.518Z"
+}

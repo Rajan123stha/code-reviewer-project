@@ -1,0 +1,51 @@
+{
+  "name": "F1-filter-data",
+  "arms": [
+    {
+      "id": "S4",
+      "strategy": "S4",
+      "config": {
+        "model": "gemini-3.5-flash",
+        "fallbackModels": [],
+        "effort": "low"
+      }
+    },
+    {
+      "id": "S1",
+      "strategy": "S1",
+      "config": {
+        "model": "gemini-3.5-flash",
+        "fallbackModels": [],
+        "effort": "low"
+      }
+    }
+  ],
+  "runs": 1,
+  "k": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "line_tolerance": 3,
+  "sample": 60,
+  "seed": 7,
+  "repos": [
+    "axios/axios",
+    "cheeriojs/cheerio",
+    "fastify/fastify",
+    "hapijs/hapi",
+    "iamkun/dayjs",
+    "immerjs/immer",
+    "knex/knex",
+    "koajs/koa",
+    "markedjs/marked",
+    "mochajs/mocha",
+    "node-fetch/node-fetch",
+    "nodejs/undici",
+    "pinojs/pino",
+    "pmndrs/zustand",
+    "sindresorhus/got"
+  ],
+  "exclude_invalid": true
+}

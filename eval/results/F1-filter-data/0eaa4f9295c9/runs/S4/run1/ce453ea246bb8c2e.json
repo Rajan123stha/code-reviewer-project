@@ -1,0 +1,207 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 4504,
+    "diffFiles": {
+      "included": [
+        "lib/core/Axios.js",
+        "test/unit/adapters/http.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 231,
+        "filesIndexed": 149,
+        "parsed": 149,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 1929
+      },
+      "symbols": 640,
+      "edges": 453,
+      "callsResolved": 613,
+      "callsTotal": 4872,
+      "changedSymbols": [
+        "lib/core/Axios.js:Axios.request",
+        "test/unit/adapters/http.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/core/Axios.js:Axios.request",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/core/Axios.js:Axios._request",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "test/unit/adapters/http.js:startHTTPServer",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/core/AxiosHeaders.js:AxiosHeaders.concat",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/core/mergeConfig.js:mergeConfig",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 3438
+    }
+  },
+  "redactions": {
+    "url-credentials": 1
+  },
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 5571,
+      "outputTokens": 1725,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 8889.173900000002,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "kAzBaqHiA72iqfkPmbHRiAo"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/core/Axios.js",
+      "line": 51,
+      "category": "error-handling",
+      "severity": "medium",
+      "claim": "Directly mutating `err.stack` can throw a TypeError if the error object is frozen or has a read-only stack property.",
+      "evidence": "err.stack = stack;",
+      "suggested_fix": "try {\n  if (!err.stack) {\n    err.stack = stack;\n  } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\\n.+\\n/, ''))) {\n    err.stack += '\\n' + stack;\n  }\n} catch (e) {\n  // Ignore errors when stack is read-only or frozen\n}",
+      "confidence": 0.9,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "error-handling",
+        "severity": "medium",
+        "confidence": 0.9,
+        "claimChars": 116,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 25,
+        "prChangedLines": 56,
+        "prFiles": 2,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Error handling (medium)**: Directly mutating `err.stack` can throw a TypeError if the error object is frozen or has a read-only stack property.\n\n> `err.stack = stack;`\n\n**Suggested fix:** try {\n  if (!err.stack) {\n    err.stack = stack;\n  } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\\n.+\\n/, ''))) {\n    err.stack += '\\n' + stack;\n  }\n} catch (e) {\n  // Ignore errors when stack is read-only or frozen\n}"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/core/Axios.js",
+      "line": 51,
+      "category": "error-handling",
+      "severity": "medium",
+      "claim": "Directly mutating `err.stack` can throw a TypeError if the error object is frozen or has a read-only stack property.",
+      "evidence": "err.stack = stack;",
+      "suggested_fix": "try {\n  if (!err.stack) {\n    err.stack = stack;\n  } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\\n.+\\n/, ''))) {\n    err.stack += '\\n' + stack;\n  }\n} catch (e) {\n  // Ignore errors when stack is read-only or frozen\n}",
+      "confidence": 0.9,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "error-handling",
+        "severity": "medium",
+        "confidence": 0.9,
+        "claimChars": 116,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 25,
+        "prChangedLines": 56,
+        "prFiles": 2,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Error handling (medium)**: Directly mutating `err.stack` can throw a TypeError if the error object is frozen or has a read-only stack property.\n\n> `err.stack = stack;`\n\n**Suggested fix:** try {\n  if (!err.stack) {\n    err.stack = stack;\n  } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\\n.+\\n/, ''))) {\n    err.stack += '\\n' + stack;\n  }\n} catch (e) {\n  // Ignore errors when stack is read-only or frozen\n}"
+    }
+  ],
+  "startedAt": "2026-10-03T14:09:16.321Z",
+  "finishedAt": "2026-10-03T14:09:27.234Z"
+}
