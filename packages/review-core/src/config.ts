@@ -65,6 +65,15 @@ export const strategyConfigSchema = z.strictObject({
   embeddingDimensions: z.number().int().positive(),
   embeddingTopK: z.number().int().min(0),
 
+  /**
+   * Learned usefulness filter. Null: off, and comments are ranked by severity and
+   * confidence. A number: comments scoring below it are dropped and the rest are ranked
+   * by score. 0 keeps every comment and only re-ranks.
+   */
+  filterThreshold: z.number().min(0).max(1).nullable(),
+  /** Pin the filter model version; the review fails if another is served. Null: any. */
+  filterModel: z.string().min(1).nullable(),
+
   /** Anthropic only: rerun policy-declined requests on a fallback model. */
   refusalFallback: z.boolean(),
 });
@@ -94,6 +103,8 @@ const BASE = {
   embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
   embeddingDimensions: DEFAULT_EMBEDDING_DIMENSIONS,
   embeddingTopK: 0,
+  filterThreshold: null,
+  filterModel: null,
   refusalFallback: false,
 } as const;
 
