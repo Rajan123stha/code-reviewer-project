@@ -20,7 +20,7 @@ from rlbench import manifest as manifest_io
 from rlbench import validation
 
 from . import comments as comments_mod
-from . import report, spec
+from . import filtercheck, report, spec
 from .metrics import load_arm
 from .runner import DEFAULT_CLI, REPO_ROOT, CliReviewer, repo_dir, run_experiment
 
@@ -69,7 +69,21 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
     if not args.cli.exists():
         raise SystemExit(f"CLI not built: {args.cli} (run `pnpm build`)")
-    reviewer = CliReviewer(cli=args.cli, fake_llm=args.fake_llm)
+    extra_args: tuple[str, ...] = ()
+    if "filter" in experiment.requires:
+        url = os.environ.get("FILTER_URL")
+        if not url:
+            raise SystemExit(
+                f"{experiment.name} uses the learned filter: start the service "
+                "(`python -m rlfilter.cli serve`) and set FILTER_URL"
+            )
+        try:
+            served = filtercheck.check_filter(filtercheck.fetch_health(url), inputs, results)
+        except filtercheck.FilterCheckError as error:
+            raise SystemExit(str(error)) from error
+        print(f"filter model {served['model_version']} ({served['features_version']})")
+        extra_args = ("--filter-url", url)
+    reviewer = CliReviewer(cli=args.cli, fake_llm=args.fake_llm, extra_args=extra_args)
     summary = run_experiment(
         experiment,
         inputs,

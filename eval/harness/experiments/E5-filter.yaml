@@ -1,13 +1,25 @@
 name: E5-filter
 description: >-
   S4 with the learned usefulness filter off and at several score thresholds (RQ3).
-# The filter service arrives in Phase 7; the harness refuses to run this until then.
+# Needs the filter service: `python -m rlfilter.cli serve`, then set FILTER_URL. The harness
+# asks the service which repositories its model was trained on and refuses to run if any of
+# them is reviewed here.
 requires: [filter]
 manifest: ../../benchmark/manifests/benchmark-a.v1.json
 cases:
   sample: 60 # review inputs, sampled round-robin across repositories
   seed: 1
   exclude_invalid: true
+  # test_repos of eval/benchmark/splits/filter-split.v1.json: the filter never saw them.
+  # A test in services/filter fails if this list and the split file disagree.
+  repos:
+    - Automattic/mongoose
+    - colinhacks/zod
+    - expressjs/express
+    - sindresorhus/execa
+    - sindresorhus/ky
+    - tj/commander.js
+    - yargs/yargs
 runs: 3 # repeats per arm, to measure LLM nondeterminism
 k: [1, 3, 5, 10]
 matching:
@@ -19,8 +31,15 @@ base:
   fallbackModels: []
   effort: low
 baseline: no-filter
+# The arms differ only after the model has answered, so they share one cached LLM response
+# per input and repeat: the comparison is paired on identical candidate comments.
+#
+# `rerank` keeps every comment and only orders them by filter score. The three thresholds are
+# PROVISIONAL: replace them with the values under "Thresholds that keep a given share of
+# comments" in the training report (keep 75%, 50%, 25%) before running this for the record.
 arms:
   - { id: no-filter, strategy: S4, config: { filterThreshold: null } }
-  - { id: filter-0.3, strategy: S4, config: { filterThreshold: 0.3 } }
-  - { id: filter-0.5, strategy: S4, config: { filterThreshold: 0.5 } }
-  - { id: filter-0.7, strategy: S4, config: { filterThreshold: 0.7 } }
+  - { id: rerank, strategy: S4, config: { filterThreshold: 0 } }
+  - { id: keep-75, strategy: S4, config: { filterThreshold: 0.05 } }
+  - { id: keep-50, strategy: S4, config: { filterThreshold: 0.1 } }
+  - { id: keep-25, strategy: S4, config: { filterThreshold: 0.2 } }

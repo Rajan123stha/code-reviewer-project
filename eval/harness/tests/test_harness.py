@@ -432,3 +432,29 @@ def test_precision_rates_and_judge_calibration(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         comments.append_human(directory / "human.jsonl", "i0", "maybe", "", "me")
     assert comments.precision_summary(tmp_path / "missing") is None
+
+
+def test_filter_experiments_refuse_training_repositories_and_model_changes(tmp_path: Path) -> None:
+    from rlharness import filtercheck
+    from rlharness.spec import ReviewInput
+
+    inputs = [ReviewInput("o/x@1", "o/x", "b", "h", "t")]
+    health = {
+        "model_version": "lr-1",
+        "features_version": "features/v1",
+        "dataset_hash": "d1",
+        "train_repos": ["o/a", "o/b"],
+    }
+    served = filtercheck.check_filter(health, inputs, tmp_path)
+    assert served["model_version"] == "lr-1"
+    assert json.loads((tmp_path / "filter.json").read_text())["train_repos"] == ["o/a", "o/b"]
+    # Resuming with the same model is fine; with another model it is not.
+    filtercheck.check_filter(health, inputs, tmp_path)
+    with pytest.raises(filtercheck.FilterCheckError, match="earlier results here used filter lr-1"):
+        filtercheck.check_filter({**health, "model_version": "gbm-2"}, inputs, tmp_path)
+    # A model trained on a repository under review, or one that does not say, is refused.
+    with pytest.raises(filtercheck.FilterCheckError, match="trained on repositories.*o/x"):
+        filtercheck.check_filter({**health, "train_repos": ["o/x"]}, inputs, tmp_path / "b")
+    with pytest.raises(filtercheck.FilterCheckError, match="does not say"):
+        filtercheck.check_filter({**health, "train_repos": []}, inputs, tmp_path / "c")
+    assert not (tmp_path / "b").exists()

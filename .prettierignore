@@ -11,4 +11,7 @@ eval/benchmark/validation/
 **/.mypy_cache/
 **/.ruff_cache/
 eval/results/
+services/filter/models/
+services/filter/data/
+services/filter/reports/
 *.ipynb

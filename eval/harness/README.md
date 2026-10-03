@@ -21,16 +21,17 @@ python -m rlharness.cli score eval/harness/experiments/pilot.yaml --cutoff 2026-
 
 One YAML file per ablation in `experiments/`, matching the plan in `docs/spec.md`:
 
-| File                   | Varies                                   | Status                                         |
-| ---------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `E1-strategies.yaml`   | Context strategy S0 to S5                | runnable                                       |
-| `E2-token-budget.yaml` | Context budget 4k / 8k / 16k / 32k on S4 | runnable                                       |
-| `E3-graph-depth.yaml`  | Call-graph depth 0 to 3 on S4            | runnable                                       |
-| `E4-verifier.yaml`     | Verifier pass on / off                   | waits for the verifier                         |
-| `E5-filter.yaml`       | Learned filter thresholds                | waits for the filter (Phase 7)                 |
-| `E6-models.yaml`       | Two LLMs on S4                           | runnable; second arm needs `ANTHROPIC_API_KEY` |
-| `E7-past-bugs.yaml`    | Past-bug retrieval on / off in S5        | runnable                                       |
-| `pilot.yaml`           | S0 vs S4, 6 inputs, 1 run                | small live check                               |
+| File                   | Varies                                          | Status                                         |
+| ---------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `E1-strategies.yaml`   | Context strategy S0 to S5                       | runnable                                       |
+| `E2-token-budget.yaml` | Context budget 4k / 8k / 16k / 32k on S4        | runnable                                       |
+| `E3-graph-depth.yaml`  | Call-graph depth 0 to 3 on S4                   | runnable                                       |
+| `E4-verifier.yaml`     | Verifier pass on / off                          | waits for the verifier                         |
+| `E5-filter.yaml`       | Learned filter thresholds                       | needs a trained filter served at `FILTER_URL`  |
+| `F1-filter-data.yaml`  | S1 and S4 on the filter's training repositories | runnable; training data, not an ablation       |
+| `E6-models.yaml`       | Two LLMs on S4                                  | runnable; second arm needs `ANTHROPIC_API_KEY` |
+| `E7-past-bugs.yaml`    | Past-bug retrieval on / off in S5               | runnable                                       |
+| `pilot.yaml`           | S0 vs S4, 6 inputs, 1 run                       | small live check                               |
 
 A spec lists `arms` (a strategy plus config overrides), `base` overrides shared by every arm,
 `runs` (repeats per arm), the case sample, `k` values and the matching tolerance. A spec that
@@ -39,6 +40,11 @@ CLI rejects unknown config keys, so a misspelled override fails instead of testi
 
 Every experiment pins one model with no fallback (`fallbackModels: []`), so all results are
 attributable to that model, and uses `effort: low` to keep sweeps affordable.
+
+E5 uses the learned filter (`services/filter`). Before it runs, the harness asks the service
+which model it serves and which repositories that model was trained on. It stops if any of
+them is under review, and it records the model version in `filter.json` so a resumed run
+cannot mix two models.
 
 ## Running
 

@@ -105,7 +105,7 @@ def summarize_arm(
 
     comments: list[float] = []
     matched = total_comments = 0
-    candidates = invalid = duplicates = 0
+    candidates = invalid = duplicates = filtered = 0
     tokens_in: list[float] = []
     tokens_cached: list[float] = []
     tokens_out: list[float] = []
@@ -129,6 +129,7 @@ def summarize_arm(
                 candidates += 1
                 invalid += candidate["status"] == "invalid"
                 duplicates += candidate["status"] == "duplicate"
+                filtered += candidate["status"] == "filtered"
             context_tokens.append(float(run["context"]["estimatedTokens"]))
             llm = run.get("llm")
             if llm:
@@ -172,6 +173,8 @@ def summarize_arm(
         "ground_truth_precision": (matched / total_comments) if total_comments else None,
         "candidates_rejected_rate": (invalid / candidates) if candidates else None,
         "candidates_duplicate_rate": (duplicates / candidates) if candidates else None,
+        # Valid, unique comments the learned filter dropped (0 when the filter is off).
+        "candidates_filtered_rate": (filtered / candidates) if candidates else None,
         "context_tokens_estimated": stats.mean(context_tokens),
         "tokens_in": stats.mean(tokens_in),
         # Share of prompt tokens the provider served from its cache (billed at a discount).
