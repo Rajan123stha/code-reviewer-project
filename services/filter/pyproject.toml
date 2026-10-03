@@ -1,0 +1,54 @@
+[project]
+name = "rlfilter"
+version = "0.1.0"
+description = "Reviewlens learned usefulness filter: dataset builder, training, scoring service"
+# The spec targets Python 3.11; the code avoids 3.11-only features so it also runs on 3.10.
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "scikit-learn>=1.5",
+  "lightgbm>=4",
+  "fastapi>=0.110",
+  "uvicorn>=0.30",
+  "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "httpx>=0.27", "types-PyYAML"]
+
+[project.scripts]
+rlfilter = "rlfilter.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# rlharness supplies the matching rule and rlbench the manifest loader, so labels are made
+# by the same code that scores the ablations.
+pythonpath = ["src", "../../eval/harness/src", "../../eval/benchmark/src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test data reads better on one line.
+"tests/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src:../../eval/harness/src:../../eval/benchmark/src"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["lightgbm.*", "sklearn.*", "matplotlib.*"]
+ignore_missing_imports = true
