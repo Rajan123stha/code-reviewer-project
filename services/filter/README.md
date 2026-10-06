@@ -50,17 +50,17 @@ Step 2 is `make filter-train`; step 3's server is `make filter-serve`.
 
 One row per valid, non-duplicate candidate from a training repository.
 
-| Source      | Label                                                                          |
-| ----------- | ------------------------------------------------------------------------------ |
-| `human`     | A person's verdict from `rlharness label`: valid = 1; nitpick or invalid = 0   |
-| `benchmark` | 1 if the comment is within 3 lines of a line the later bug fix changed, else 0 |
+| Source      | Label                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `human`     | A person's verdict from `rlharness label`: valid = 1; nitpick or invalid = 0                                                                       |
+| `benchmark` | 1 if the comment is within 3 lines of a line the later bug fix changed, else 0                                                                     |
+| `feedback`  | From real pull requests (`pnpm export:feedback`, then `dataset --feedback`): lines changed or thumbs-up = 1; dismissed, ignored or thumbs-down = 0 |
 
 A human label overrides the benchmark label for the same comment. Benchmark zeros are noisy:
 a comment about a real problem that the benchmark does not know is labeled 0, so the filter
 learns "points at the known bug", which is narrower than "useful".
 
-Not built: labels from historical human review comments (the spec's bootstrap source) and
-from accept/dismiss feedback on posted comments. See [ADR 0009](../../docs/adr/0009-learned-filter.md).
+Not built: labels from historical human review comments (the spec's bootstrap source). See [ADR 0009](../../docs/adr/0009-learned-filter.md).
 
 ## Features (`features/v1`)
 

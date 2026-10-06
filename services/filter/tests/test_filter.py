@@ -297,6 +297,41 @@ def test_dataset_labels_rows_and_drops_what_must_not_be_trained_on(tmp_path: Pat
     assert meta["dataset_hash"] == dataset.content_hash(rows)
 
 
+def test_feedback_rows_join_the_training_set_unless_from_a_test_repository() -> None:
+    def row(repo: str, label: int, **extra: Any) -> dict[str, Any]:
+        return {
+            "id": f"feedback-{repo}-{label}",
+            "repo": repo,
+            "review": f"feedback/{repo}#1/1",
+            "status": "selected",
+            "label": label,
+            "label_source": "feedback",
+            "features_version": FEATURES_VERSION,
+            "features": features(),
+            **extra,
+        }
+
+    stats = dataset.BuildStats()
+    merged = dataset.merge_feedback(
+        [],
+        [
+            row("acme/app", 1),
+            row("acme/app", 0),
+            row(TEST[0], 1),
+            row("acme/app", 1, features_version="features/v0"),
+            row("acme/app", 1, features=features(category="style")),
+        ],
+        SPLIT,
+        stats,
+    )
+    assert [(r["repo"], r["label"], r["label_source"]) for r in merged] == [
+        ("acme/app", 0, "feedback"),
+        ("acme/app", 1, "feedback"),
+    ]
+    assert dict(stats.dropped) == {"test_repo": 1, "other_features_version": 1, "bad_features": 1}
+    assert stats.rows == 2 and stats.positives == 1
+
+
 def test_dataset_skips_runs_made_with_other_feature_definitions(tmp_path: Path) -> None:
     manifest = {"cases": [case("o/a", "111", "src/a.ts", [10])]}
     write_run(

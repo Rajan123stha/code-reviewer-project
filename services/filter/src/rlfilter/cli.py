@@ -46,6 +46,10 @@ def cmd_dataset(args: argparse.Namespace) -> int:
     rows, stats = dataset.build(
         args.results, manifest_io.load(args.manifest), split.load(args.split)
     )
+    if args.feedback:
+        rows = dataset.merge_feedback(
+            rows, dataset.load(args.feedback), split.load(args.split), stats
+        )
     meta = dataset.save(rows, stats, split.load(args.split), args.out)
     print(json.dumps(meta, indent=2))
     print(f"wrote {len(rows)} rows -> {args.out}")
@@ -147,6 +151,9 @@ def main(argv: list[str] | None = None) -> int:
     paths(p)
     p.add_argument("--results", type=Path, default=DEFAULT_RESULTS)
     p.add_argument("--out", type=Path, default=DEFAULT_DATASET)
+    p.add_argument(
+        "--feedback", type=Path, help="labeled production comments (pnpm export:feedback)"
+    )
     p.set_defaults(func=cmd_dataset)
 
     p = sub.add_parser("train", help="cross-validate and save the model")
