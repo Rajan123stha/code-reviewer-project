@@ -1,0 +1,96 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 10759,
+    "diffFiles": {
+      "included": [
+        "README.md",
+        "lib/adapters/http.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "README.md",
+        "lib/adapters/http.js"
+      ],
+      "omitted": []
+    }
+  },
+  "redactions": {
+    "assigned-secret": 2
+  },
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 12467,
+      "outputTokens": 259,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 66182.26460000001,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "5PfEasrvBOvLqfkPhcuBgAs"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/adapters/http.js",
+      "line": 110,
+      "category": "bug",
+      "severity": "high",
+      "claim": "When a proxy is configured (globally or via environment variables), options.socketPath is overwritten and ignored, while the proxy host is improperly assigned.",
+      "evidence": "    if (proxy) {\n      options.hostname = proxy.host;\n      options.host = proxy.host;\n      options.headers.host = parsed.hostname + (parsed.port ? ':' + parsed.port : '');\n      options.port = proxy.port;\n      options.path = protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path;",
+      "suggested_fix": "If `config.socketPath` is defined, ignore or disable the proxy configurations because proxying UNIX domain sockets via normal HTTP proxies is not standard or supported in this manner, or ensure proxy configurations do not override the UNIX socket options.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "invalid",
+      "rejectReason": "line_not_in_diff",
+      "duplicateOf": null,
+      "rank": null,
+      "features": null,
+      "filterScore": null,
+      "body": "**Bug (high)**: When a proxy is configured (globally or via environment variables), options.socketPath is overwritten and ignored, while the proxy host is improperly assigned.\n\n```\nif (proxy) {\n      options.hostname = proxy.host;\n      options.host = proxy.host;\n      options.headers.host = parsed.hostname + (parsed.port ? ':' + parsed.port : '');\n      options.port = proxy.port;\n      options.path = protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path;\n```\n\n**Suggested fix:** If `config.socketPath` is defined, ignore or disable the proxy configurations because proxying UNIX domain sockets via normal HTTP proxies is not standard or supported in this manner, or ensure proxy configurations do not override the UNIX socket options."
+    }
+  ],
+  "selected": [],
+  "startedAt": "2026-10-06T13:30:11.079Z",
+  "finishedAt": "2026-10-06T13:31:17.319Z"
+}

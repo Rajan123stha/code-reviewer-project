@@ -1,0 +1,156 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 8463,
+    "diffFiles": {
+      "included": [
+        "lib/adapters/http.js",
+        "test/unit/adapters/http.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "lib/adapters/http.js"
+      ],
+      "omitted": [
+        "test/unit/adapters/http.js"
+      ]
+    }
+  },
+  "redactions": {
+    "url-credentials": 1
+  },
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 9516,
+      "outputTokens": 1003,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 130889.98950000001,
+    "attempts": 3,
+    "cached": false,
+    "requestId": "2PfEaq_iJp_z4-EP27aBqAo"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/adapters/http.js",
+      "line": 304,
+      "category": "bug",
+      "severity": "critical",
+      "claim": "Using `pathname.concat(searchParams)` fails to include the leading `?` delimiter, merging query parameters directly into the pathname string (e.g., `/apiusers=1` instead of `/api?users=1`).",
+      "evidence": "const path = parsed.pathname.concat(parsed.searchParams);",
+      "suggested_fix": "const path = parsed.pathname + parsed.search;",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "critical",
+        "confidence": 1,
+        "claimChars": 189,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 30,
+        "prChangedLines": 32,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (critical)**: Using `pathname.concat(searchParams)` fails to include the leading `?` delimiter, merging query parameters directly into the pathname string (e.g., `/apiusers=1` instead of `/api?users=1`).\n\n> `const path = parsed.pathname.concat(parsed.searchParams);`\n\n**Suggested fix:** const path = parsed.pathname + parsed.search;"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/adapters/http.js",
+      "line": 304,
+      "category": "bug",
+      "severity": "critical",
+      "claim": "Using `pathname.concat(searchParams)` fails to include the leading `?` delimiter, merging query parameters directly into the pathname string (e.g., `/apiusers=1` instead of `/api?users=1`).",
+      "evidence": "const path = parsed.pathname.concat(parsed.searchParams);",
+      "suggested_fix": "const path = parsed.pathname + parsed.search;",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "critical",
+        "confidence": 1,
+        "claimChars": 189,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 30,
+        "prChangedLines": 32,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (critical)**: Using `pathname.concat(searchParams)` fails to include the leading `?` delimiter, merging query parameters directly into the pathname string (e.g., `/apiusers=1` instead of `/api?users=1`).\n\n> `const path = parsed.pathname.concat(parsed.searchParams);`\n\n**Suggested fix:** const path = parsed.pathname + parsed.search;"
+    }
+  ],
+  "startedAt": "2026-10-06T13:28:59.213Z",
+  "finishedAt": "2026-10-06T13:31:10.159Z"
+}

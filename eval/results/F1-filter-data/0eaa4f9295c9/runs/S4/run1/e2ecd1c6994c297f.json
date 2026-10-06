@@ -1,0 +1,175 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 499,
+    "diffFiles": {
+      "included": [
+        "README.md",
+        "lib/adapters/http.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 113,
+        "filesIndexed": 77,
+        "parsed": 76,
+        "fromCache": 1,
+        "unreadable": 0,
+        "durationMs": 784
+      },
+      "symbols": 206,
+      "edges": 248,
+      "callsResolved": 297,
+      "callsTotal": 1742,
+      "changedSymbols": [
+        "lib/adapters/http.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 0
+    }
+  },
+  "redactions": {
+    "assigned-secret": 2
+  },
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1268,
+      "outputTokens": 1281,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 9632.153199999999,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "1_fEap-GLpj5juMPkNqBgAY"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/adapters/http.js",
+      "line": 89,
+      "category": "bug",
+      "severity": "high",
+      "claim": "If a proxy is configured (manually or via environment variables), proxy options will be set on the request alongside `socketPath`, which causes Node.js to throw an error.",
+      "evidence": "var proxy = config.proxy;\n    if (!proxy && proxy !== false) {",
+      "suggested_fix": "Disable or ignore proxy configurations when `config.socketPath` is defined. For example, set `proxy = false;` if `config.socketPath` is truthy before resolving the proxy configuration.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 170,
+        "evidenceLines": 2,
+        "hasFix": true,
+        "evidenceInAddedLines": false,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": false,
+        "fileChangedLines": 9,
+        "prChangedLines": 13,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: If a proxy is configured (manually or via environment variables), proxy options will be set on the request alongside `socketPath`, which causes Node.js to throw an error.\n\n```\nvar proxy = config.proxy;\n    if (!proxy && proxy !== false) {\n```\n\n**Suggested fix:** Disable or ignore proxy configurations when `config.socketPath` is defined. For example, set `proxy = false;` if `config.socketPath` is truthy before resolving the proxy configuration."
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/adapters/http.js",
+      "line": 89,
+      "category": "bug",
+      "severity": "high",
+      "claim": "If a proxy is configured (manually or via environment variables), proxy options will be set on the request alongside `socketPath`, which causes Node.js to throw an error.",
+      "evidence": "var proxy = config.proxy;\n    if (!proxy && proxy !== false) {",
+      "suggested_fix": "Disable or ignore proxy configurations when `config.socketPath` is defined. For example, set `proxy = false;` if `config.socketPath` is truthy before resolving the proxy configuration.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 170,
+        "evidenceLines": 2,
+        "hasFix": true,
+        "evidenceInAddedLines": false,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": false,
+        "fileChangedLines": 9,
+        "prChangedLines": 13,
+        "prFiles": 2,
+        "symbolCallers": null,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: If a proxy is configured (manually or via environment variables), proxy options will be set on the request alongside `socketPath`, which causes Node.js to throw an error.\n\n```\nvar proxy = config.proxy;\n    if (!proxy && proxy !== false) {\n```\n\n**Suggested fix:** Disable or ignore proxy configurations when `config.socketPath` is defined. For example, set `proxy = false;` if `config.socketPath` is truthy before resolving the proxy configuration."
+    }
+  ],
+  "startedAt": "2026-10-06T13:29:57.601Z",
+  "finishedAt": "2026-10-06T13:30:08.093Z"
+}

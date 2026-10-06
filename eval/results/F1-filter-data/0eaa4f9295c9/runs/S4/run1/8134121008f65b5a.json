@@ -1,0 +1,408 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 15994,
+    "diffFiles": {
+      "included": [
+        "lib/api/attributes.js",
+        "lib/api/css.js",
+        "lib/api/forms.js",
+        "lib/api/manipulation.js",
+        "lib/api/traversing.js",
+        "lib/cheerio.js",
+        "lib/options.js",
+        "lib/static.js",
+        "test/cheerio.js",
+        "test/parse.js",
+        "test/xml.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 89,
+        "filesIndexed": 28,
+        "parsed": 28,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 862
+      },
+      "symbols": 269,
+      "edges": 226,
+      "callsResolved": 461,
+      "callsTotal": 5475,
+      "changedSymbols": [
+        "lib/api/attributes.js:dataAttrPrefix",
+        "lib/api/attributes.js:attr",
+        "lib/api/attributes.js:prop",
+        "lib/api/attributes.js:setData",
+        "lib/api/attributes.js:hasClass",
+        "lib/api/css.js:domEach",
+        "lib/api/css.js:getCss",
+        "lib/api/forms.js:rCRLF",
+        "lib/api/forms.js:serialize",
+        "lib/api/forms.js:serializeArray",
+        "lib/api/manipulation.js:slice",
+        "lib/api/manipulation.js:_makeDomArray",
+        "lib/api/manipulation.js:wrap",
+        "lib/api/manipulation.js:wrapInner",
+        "lib/api/manipulation.js:empty",
+        "lib/api/manipulation.js:html",
+        "lib/api/manipulation.js:text",
+        "lib/api/traversing.js:<module>",
+        "lib/api/traversing.js:isTag",
+        "lib/api/traversing.js:find",
+        "lib/api/traversing.js:closest",
+        "lib/api/traversing.js:next",
+        "lib/api/traversing.js:nextAll",
+        "lib/api/traversing.js:nextUntil",
+        "lib/api/traversing.js:prev",
+        "lib/api/traversing.js:prevAll",
+        "lib/api/traversing.js:prevUntil",
+        "lib/api/traversing.js:siblings",
+        "lib/api/traversing.js:children",
+        "lib/api/traversing.js:contents",
+        "lib/api/traversing.js:map",
+        "lib/cheerio.js:<module>",
+        "lib/cheerio.js:isHtml",
+        "lib/cheerio.js:Cheerio",
+        "lib/options.js:<module>",
+        "lib/options.js:flatten",
+        "lib/static.js:<module>",
+        "lib/static.js:load",
+        "lib/static.js:initialize",
+        "lib/static.js:html",
+        "lib/static.js:xml",
+        "test/cheerio.js:<module>",
+        "test/cheerio.js:food",
+        "test/parse.js:<module>",
+        "test/xml.js:<module>",
+        "test/xml.js:xml"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/api/traversing.js:isTag",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:next",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:nextAll",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:nextUntil",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:prev",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:prevAll",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:prevUntil",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/traversing.js:siblings",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/cheerio.js:isHtml",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/cheerio.js:Cheerio",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:dataAttrPrefix",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:attr",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:prop",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:setData",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:hasClass",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/css.js:domEach",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/css.js:getCss",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/forms.js:rCRLF",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/forms.js:serialize",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/forms.js:serializeArray",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:slice",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:_makeDomArray",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:wrap",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:wrapInner",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:empty",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:html",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/manipulation.js:text",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        },
+        {
+          "name": "lib/api/traversing.js:find",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        },
+        {
+          "name": "lib/api/traversing.js:closest",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        },
+        {
+          "name": "test/cheerio.js:food",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 3,
+      "omitted": 40,
+      "tokens": 7075
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 18704,
+      "outputTokens": 163,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 73066.63339999999,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "fPjEasfSHL32juMPsa3c2AU"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/api/manipulation.js",
+      "line": 289,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Returning early from a loop over `this` prevents wrapping subsequent elements if one of the elements lacks a parent.",
+      "evidence": "if (!parent) {\n      return;\n    }",
+      "suggested_fix": "Replace `return;` with `continue;` since the loop is now a standard `for` loop instead of a Lodash `forEach` callback where `return` acted as a continue statement.",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 116,
+        "evidenceLines": 3,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 170,
+        "prChangedLines": 387,
+        "prFiles": 11,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Returning early from a loop over `this` prevents wrapping subsequent elements if one of the elements lacks a parent.\n\n```\nif (!parent) {\n      return;\n    }\n```\n\n**Suggested fix:** Replace `return;` with `continue;` since the loop is now a standard `for` loop instead of a Lodash `forEach` callback where `return` acted as a continue statement."
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/api/manipulation.js",
+      "line": 289,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Returning early from a loop over `this` prevents wrapping subsequent elements if one of the elements lacks a parent.",
+      "evidence": "if (!parent) {\n      return;\n    }",
+      "suggested_fix": "Replace `return;` with `continue;` since the loop is now a standard `for` loop instead of a Lodash `forEach` callback where `return` acted as a continue statement.",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 116,
+        "evidenceLines": 3,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 170,
+        "prChangedLines": 387,
+        "prFiles": 11,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Returning early from a loop over `this` prevents wrapping subsequent elements if one of the elements lacks a parent.\n\n```\nif (!parent) {\n      return;\n    }\n```\n\n**Suggested fix:** Replace `return;` with `continue;` since the loop is now a standard `for` loop instead of a Lodash `forEach` callback where `return` acted as a continue statement."
+    }
+  ],
+  "startedAt": "2026-10-06T13:32:42.381Z",
+  "finishedAt": "2026-10-06T13:33:56.398Z"
+}
