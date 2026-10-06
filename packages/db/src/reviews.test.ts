@@ -57,6 +57,7 @@ function run(): ReviewRun {
     },
     redactions: {},
     featuresVersion: 'features/v1',
+    policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
     filter: { modelVersion: 'lr-abc', threshold: 0.3, scored: 1, dropped: 0 },
     llm: {
       provider: 'anthropic',

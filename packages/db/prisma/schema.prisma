@@ -103,36 +103,56 @@ model Review {
   candidates       CandidateComment[]
 
   @@unique([pullRequestId, headSha, configHash])
+  @@index([startedAt])
   @@map("reviews")
 }
 
 /// Every comment the model proposed, including rejected ones: the filter's training data.
 model CandidateComment {
-  id               Int     @id @default(autoincrement())
-  reviewId         Int     @map("review_id")
+  id               Int               @id @default(autoincrement())
+  reviewId         Int               @map("review_id")
   index            Int
-  filePath         String  @map("file_path")
+  filePath         String            @map("file_path")
   line             Int
   category         String
   severity         String
   claim            String
   evidence         String
-  suggestedFix     String? @map("suggested_fix")
+  suggestedFix     String?           @map("suggested_fix")
   body             String
-  llmConfidence    Float   @map("llm_confidence")
-  filterScore      Float?  @map("filter_score")
+  llmConfidence    Float             @map("llm_confidence")
+  filterScore      Float?            @map("filter_score")
   /// Filter inputs as computed by the pipeline; null for invalid candidates.
-  features         Json?   @map("features_json")
+  features         Json?             @map("features_json")
   /// selected | over_cap | filtered | duplicate | invalid
   status           String
-  rejectReason     String? @map("reject_reason")
-  duplicateOfIndex Int?    @map("duplicate_of_index")
+  rejectReason     String?           @map("reject_reason")
+  duplicateOfIndex Int?              @map("duplicate_of_index")
   rank             Int?
-  posted           Boolean @default(false)
-  review           Review  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  posted           Boolean           @default(false)
+  /// The GitHub review comment this candidate became, once posted.
+  githubCommentId  BigInt?           @unique @map("github_comment_id")
+  review           Review            @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  feedback         CommentFeedback[]
 
   @@unique([reviewId, index])
   @@map("candidate_comments")
+}
+
+/// One observation of what happened to a posted comment. A comment can have several.
+model CommentFeedback {
+  id                 Int              @id @default(autoincrement())
+  candidateCommentId Int              @map("candidate_comment_id")
+  /// resolved_with_change | dismissed | thumbs_up | thumbs_down | ignored
+  outcome            String
+  /// push | thread | reactions | close
+  source             String
+  detail             Json?            @map("detail_json")
+  observedAt         DateTime         @default(now()) @map("observed_at")
+  candidateComment   CandidateComment @relation(fields: [candidateCommentId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateCommentId, outcome, source])
+  @@map("comment_feedback")
 }
 
 /// Content-addressed cache of per-file parses: key = parser version + language + git blob id.
