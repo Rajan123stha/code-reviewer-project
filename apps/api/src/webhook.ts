@@ -1,7 +1,7 @@
 import { withSpan } from '@reviewlens/shared';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import type { EnqueueIndex, EnqueueReview } from './queue.js';
+import type { EnqueueFeedback, EnqueueIndex, EnqueueReview } from './queue.js';
 import { verifyGitHubSignature } from './signature.js';
 
 /** pull_request actions that trigger a review. */
@@ -22,13 +22,27 @@ const pullRequestEventSchema = z.object({
     number: z.number(),
     head: z.object({ sha: z.string() }),
     base: z.object({ sha: z.string() }),
+    merged: z.boolean().nullish(),
   }),
+});
+
+const reviewThreadEventSchema = z.object({
+  action: z.string(),
+  installation: z.object({ id: z.number() }),
+  repository: z.object({
+    id: z.number(),
+    name: z.string(),
+    owner: z.object({ login: z.string() }),
+  }),
+  pull_request: z.object({ number: z.number() }),
+  thread: z.object({ comments: z.array(z.object({ id: z.number() })).min(1) }),
 });
 
 export interface WebhookOptions {
   secret: string;
   enqueueReview: EnqueueReview;
   enqueueIndex: EnqueueIndex;
+  enqueueFeedback: EnqueueFeedback;
 }
 
 const pushEventSchema = z.object({
@@ -96,6 +110,24 @@ export const webhookRoutes: FastifyPluginAsync<WebhookOptions> = async (app, opt
       log.info({ jobId, sha: after }, 'index job enqueued');
       return reply.code(202).send({ status: 'queued', jobId });
     }
+    if (event === 'pull_request_review_thread') {
+      // A resolved thread is feedback on the comment that started it.
+      const thread = reviewThreadEventSchema.safeParse(payload);
+      if (!thread.success) return reply.code(400).send({ error: 'malformed thread payload' });
+      const { action, installation, repository, pull_request: pr } = thread.data;
+      if (action !== 'resolved') return reply.code(200).send({ status: 'ignored', action });
+      const { jobId } = await opts.enqueueFeedback({
+        kind: 'thread_resolved',
+        deliveryId,
+        installationId: installation.id,
+        repositoryId: repository.id,
+        owner: repository.owner.login,
+        repo: repository.name,
+        pullNumber: pr.number,
+        commentIds: thread.data.thread.comments.map((c) => c.id),
+      });
+      return reply.code(202).send({ status: 'queued', jobId });
+    }
     if (event !== 'pull_request') {
       log.debug('ignoring event');
       return reply.code(200).send({ status: 'ignored' });
@@ -107,8 +139,28 @@ export const webhookRoutes: FastifyPluginAsync<WebhookOptions> = async (app, opt
       return reply.code(400).send({ error: 'malformed pull_request payload' });
     }
     const { action, installation, repository, pull_request: pr } = parsed.data;
+    const target = {
+      deliveryId,
+      installationId: installation.id,
+      repositoryId: repository.id,
+      owner: repository.owner.login,
+      repo: repository.name,
+      pullNumber: pr.number,
+    };
+    if (action === 'closed') {
+      const { jobId } = await opts.enqueueFeedback({
+        ...target,
+        kind: 'closed',
+        merged: pr.merged ?? false,
+      });
+      return reply.code(202).send({ status: 'queued', jobId });
+    }
     if (!REVIEW_ACTIONS.has(action)) {
       return reply.code(200).send({ status: 'ignored', action });
+    }
+    // A new push may have acted on comments from earlier reviews of this pull request.
+    if (action === 'synchronize') {
+      await opts.enqueueFeedback({ ...target, kind: 'push', headSha: pr.head.sha });
     }
 
     const { jobId } = await withSpan(

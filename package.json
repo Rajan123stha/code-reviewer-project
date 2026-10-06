@@ -17,6 +17,7 @@
     "dev:worker": "pnpm --filter @reviewlens/worker dev",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "export:feedback": "tsx --conditions=source apps/worker/src/export-feedback.ts",
     "db:migrate": "pnpm --filter @reviewlens/db migrate:deploy",
     "review": "tsx --conditions=source apps/cli/src/main.ts review",
     "reviewlens": "tsx --conditions=source apps/cli/src/main.ts"

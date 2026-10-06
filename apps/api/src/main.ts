@@ -3,6 +3,7 @@ import {
   logEnv,
   parseEnv,
   redisEnv,
+  FEEDBACK_QUEUE,
   INDEX_QUEUE,
   REVIEW_QUEUE,
   shutdownTracing,
@@ -11,7 +12,7 @@ import { Queue } from 'bullmq';
 import { BullMQOtel } from 'bullmq-otel';
 import { z } from 'zod';
 import { buildApp } from './app.js';
-import { createEnqueueIndex, createEnqueueReview } from './queue.js';
+import { createEnqueueFeedback, createEnqueueIndex, createEnqueueReview } from './queue.js';
 
 const env = parseEnv(
   z.object({
@@ -37,10 +38,17 @@ const indexQueue = new Queue(INDEX_QUEUE, {
 });
 indexQueue.on('error', (err) => logger.error({ err }, 'index queue connection error'));
 
+const feedbackQueue = new Queue(FEEDBACK_QUEUE, {
+  connection: { url: env.REDIS_URL, enableOfflineQueue: false },
+  telemetry: new BullMQOtel({ tracerName: 'reviewlens-api' }),
+});
+feedbackQueue.on('error', (err) => logger.error({ err }, 'feedback queue connection error'));
+
 const app = buildApp({
   webhookSecret: env.GITHUB_WEBHOOK_SECRET,
   enqueueReview: createEnqueueReview(queue),
   enqueueIndex: createEnqueueIndex(indexQueue),
+  enqueueFeedback: createEnqueueFeedback(feedbackQueue),
   logger,
 });
 
@@ -49,6 +57,7 @@ async function shutdown(signal: string) {
   await app.close();
   await queue.close();
   await indexQueue.close();
+  await feedbackQueue.close();
   await shutdownTracing();
   process.exit(0);
 }

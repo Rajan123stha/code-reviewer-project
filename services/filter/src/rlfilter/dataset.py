@@ -11,6 +11,10 @@ Labels, in order of precedence:
    bug fix changed = 1; otherwise 0. This is the harness's own matching rule. The zeros are
    noisy: a comment on a real problem the benchmark does not know about is labeled 0.
 
+3. `feedback`: what happened to a comment the app posted on a real pull request
+   (`pnpm export:feedback`): changed lines or a thumbs-up = 1; dismissed, ignored or a
+   thumbs-down = 0. Added by `merge_feedback`; these are not benchmark comments.
+
 Rows from test repositories are dropped here, so a model cannot be trained on them by mistake.
 """
 
@@ -151,6 +155,50 @@ def build(
     rows.sort(key=lambda r: (r["repo"], r["review"], r["id"]))
     stats.rows = len(rows)
     return rows, stats
+
+
+def merge_feedback(
+    rows: list[dict[str, Any]],
+    feedback: list[dict[str, Any]],
+    split: Split,
+    stats: BuildStats,
+) -> list[dict[str, Any]]:
+    """Add labeled production comments (rows exported by `pnpm export:feedback`).
+
+    Their repositories are outside the benchmark, so they are training data unless a
+    repository happens to be one of the split's test repositories.
+    """
+    merged = list(rows)
+    for row in feedback:
+        if row["repo"] in split.test_repos:
+            stats.dropped["test_repo"] += 1
+            continue
+        if row.get("features_version") != FEATURES_VERSION:
+            stats.dropped["other_features_version"] += 1
+            continue
+        try:
+            vectorize(row["features"])
+        except FeatureError:
+            stats.dropped["bad_features"] += 1
+            continue
+        merged.append(
+            {
+                "id": str(row["id"]),
+                "repo": str(row["repo"]),
+                "input_key": str(row["review"]),
+                "review": str(row["review"]),
+                "status": str(row["status"]),
+                "label": int(row["label"]),
+                "label_source": "feedback",
+                "features": row["features"],
+            }
+        )
+        stats.by_repo[str(row["repo"])] += 1
+        stats.by_label_source["feedback"] += 1
+        stats.positives += int(row["label"])
+    merged.sort(key=lambda r: (r["repo"], r["review"], r["id"]))
+    stats.rows = len(merged)
+    return merged
 
 
 def content_hash(rows: list[dict[str, Any]]) -> str:

@@ -1,0 +1,214 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 2452,
+    "diffFiles": {
+      "included": [
+        "lib/api/attributes.js",
+        "test/api/attributes.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 35,
+        "filesIndexed": 21,
+        "parsed": 15,
+        "fromCache": 6,
+        "unreadable": 0,
+        "durationMs": 950
+      },
+      "symbols": 252,
+      "edges": 211,
+      "callsResolved": 458,
+      "callsTotal": 5371,
+      "changedSymbols": [
+        "lib/api/attributes.js:<module>",
+        "lib/api/attributes.js:getProp",
+        "lib/api/attributes.js:setProp",
+        "lib/api/attributes.js:prop",
+        "test/api/attributes.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/api/attributes.js:prop",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:getProp",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:setProp",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:isTag",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:getAttr",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/api/attributes.js:domEach",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 939
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 3665,
+      "outputTokens": 579,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 12237.229600000002,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "yvjEauC6ELLYjuMPsprfwQ0"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/api/attributes.js",
+      "line": 92,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling .prop() on an empty selection will throw a TypeError when trying to access properties on `this[0]`, which is undefined.",
+      "evidence": "if (typeof name === 'string' && value === undefined) {",
+      "suggested_fix": "Add a check at the beginning of the getter block to return `undefined` if `this[0]` is not defined: `if (!this[0]) return;`",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 127,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 63,
+        "prChangedLines": 116,
+        "prFiles": 2,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling .prop() on an empty selection will throw a TypeError when trying to access properties on `this[0]`, which is undefined.\n\n> `if (typeof name === 'string' && value === undefined) {`\n\n**Suggested fix:** Add a check at the beginning of the getter block to return `undefined` if `this[0]` is not defined: `if (!this[0]) return;`"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/api/attributes.js",
+      "line": 92,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling .prop() on an empty selection will throw a TypeError when trying to access properties on `this[0]`, which is undefined.",
+      "evidence": "if (typeof name === 'string' && value === undefined) {",
+      "suggested_fix": "Add a check at the beginning of the getter block to return `undefined` if `this[0]` is not defined: `if (!this[0]) return;`",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 127,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 63,
+        "prChangedLines": 116,
+        "prFiles": 2,
+        "symbolCallers": 0,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling .prop() on an empty selection will throw a TypeError when trying to access properties on `this[0]`, which is undefined.\n\n> `if (typeof name === 'string' && value === undefined) {`\n\n**Suggested fix:** Add a check at the beginning of the getter block to return `undefined` if `this[0]` is not defined: `if (!this[0]) return;`"
+    }
+  ],
+  "startedAt": "2026-10-06T13:34:00.241Z",
+  "finishedAt": "2026-10-06T13:34:13.537Z"
+}

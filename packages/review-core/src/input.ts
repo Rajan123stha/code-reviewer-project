@@ -1,4 +1,5 @@
 import { gitBlobSha, type FixCommit, type RepoFileEntry } from '@reviewlens/context-engine';
+import type { RepoPolicy } from './policy.js';
 
 export type { FixCommit, RepoFileEntry };
 
@@ -40,6 +41,11 @@ export interface ReviewInput {
    * by strategies with `usePastBugs`; without it they retrieve nothing.
    */
   fixCommits?: () => Promise<FixCommit[]>;
+  /**
+   * The repository's own settings (`.reviewlens.yml`), read from the base commit so a pull
+   * request cannot loosen the rules it is reviewed under. Absent: defaults.
+   */
+  policy?: RepoPolicy;
 }
 
 /** In-memory snapshot, for tests and for callers that already hold the files. */

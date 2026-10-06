@@ -10,6 +10,7 @@ import { assertScoreResult, type CommentScorer } from './filter.js';
 import { formatCommentBody } from './format.js';
 import { addExtraContext } from './graph-context.js';
 import type { ReviewInput } from './input.js';
+import { DEFAULT_POLICY, PolicyMatcher, type RepoPolicy } from './policy.js';
 import { loadPrompt, renderTemplate } from './prompts.js';
 import { REVIEW_SCHEMA_NAME, reviewOutputSchema, type ModelComment } from './schema.js';
 import { scrubSecrets } from './scrub.js';
@@ -19,10 +20,12 @@ import { DiffIndex, normalizePath, type RejectReason } from './validate.js';
  * - selected: valid, kept after dedupe, within maxComments; this is what gets posted.
  * - over_cap: valid and unique, but ranked below the maxComments cut.
  * - filtered: valid and unique, but scored below the usefulness filter's threshold.
+ * - suppressed: valid, but of a severity or category the repository's policy excludes.
  * - duplicate: valid, but a near-duplicate of a higher-priority comment.
  * - invalid: failed validation (see rejectReason).
  */
-export type CandidateStatus = 'selected' | 'over_cap' | 'filtered' | 'duplicate' | 'invalid';
+export type CandidateStatus =
+  'selected' | 'over_cap' | 'filtered' | 'suppressed' | 'duplicate' | 'invalid';
 
 export interface Candidate extends ModelComment {
   /** Position in the model's output, stable across processing. */
@@ -65,6 +68,8 @@ export interface ReviewRun {
   /** Null when the PR had nothing reviewable, so no call was made. */
   llm: LLMCallSummary | null;
   featuresVersion: string;
+  /** The repository policy the review ran under. */
+  policy: RepoPolicy;
   /** The filter that scored this review; null when the filter is off or had nothing to score. */
   filter: { modelVersion: string; threshold: number; scored: number; dropped: number } | null;
   candidates: Candidate[];
@@ -114,7 +119,11 @@ export async function runReview(
   };
 
   // 1. Ingest: scrub first, so nothing downstream (prompt, validation, storage) sees secrets.
-  const files = parseUnifiedDiff(scrub(input.diff)).filter(isReviewable);
+  const matcher = new PolicyMatcher(input.policy ?? DEFAULT_POLICY);
+  const maxComments = Math.min(config.maxComments, matcher.policy.maxComments ?? Infinity);
+  const files = parseUnifiedDiff(scrub(input.diff))
+    .filter(isReviewable)
+    .filter((f) => !matcher.ignoresPath(f.newPath));
   const scrubbedReads = new Map<string, Promise<string | null>>();
   const readScrubbed = (path: string) => {
     let read = scrubbedReads.get(path);
@@ -152,6 +161,7 @@ export async function runReview(
     context: context.stats,
     redactions,
     featuresVersion: FEATURES_VERSION,
+    policy: matcher.policy,
   };
   if (context.sections.length === 0) {
     return {
@@ -189,7 +199,9 @@ export async function runReview(
   const index = new DiffIndex(files, headContents);
   const comments = result.output.comments.map((c) => ({ ...c, file: normalizePath(c.file) }));
   const reasons = comments.map((c) => index.validate(c));
-  const validIdx = comments.map((_, i) => i).filter((i) => reasons[i] === null);
+  const wellFormed = comments.map((_, i) => i).filter((i) => reasons[i] === null);
+  // The repository's policy removes whole kinds of comment before anything is ranked.
+  const validIdx = wellFormed.filter((i) => matcher.allows(comments[i]!));
   const dupOf = findDuplicates(validIdx.map((i) => comments[i]!));
   const unique = validIdx.filter((_, k) => dupOf[k] === null);
   unique.sort((i, j) => compareComments(comments[i]!, comments[j]!));
@@ -205,6 +217,9 @@ export async function runReview(
     filterScore: null,
     body: formatCommentBody(c),
   }));
+  for (const i of wellFormed) {
+    if (!matcher.allows(comments[i]!)) candidates[i]!.status = 'suppressed';
+  }
   validIdx.forEach((i, k) => {
     const d = dupOf[k];
     if (d !== null && d !== undefined) {
@@ -253,7 +268,7 @@ export async function runReview(
   // 6. Rank and cap.
   ranked.forEach((i, r) => {
     candidates[i]!.rank = r + 1;
-    candidates[i]!.status = r < config.maxComments ? 'selected' : 'over_cap';
+    candidates[i]!.status = r < maxComments ? 'selected' : 'over_cap';
   });
 
   return {
@@ -272,7 +287,7 @@ export async function runReview(
     },
     filter,
     candidates,
-    selected: ranked.slice(0, config.maxComments).map((i) => candidates[i]!),
+    selected: ranked.slice(0, maxComments).map((i) => candidates[i]!),
     startedAt,
     finishedAt: new Date().toISOString(),
   };

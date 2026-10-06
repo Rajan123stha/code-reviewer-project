@@ -1,0 +1,248 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 4371,
+    "diffFiles": {
+      "included": [
+        "fastify.js",
+        "lib/pluginOverride.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 209,
+        "filesIndexed": 142,
+        "parsed": 131,
+        "fromCache": 11,
+        "unreadable": 0,
+        "durationMs": 3911
+      },
+      "symbols": 817,
+      "edges": 379,
+      "callsResolved": 1358,
+      "callsTotal": 13743,
+      "changedSymbols": [
+        "fastify.js:<module>",
+        "lib/pluginOverride.js:<module>",
+        "lib/pluginOverride.js:buildRoutePrefix"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/pluginOverride.js:buildRoutePrefix",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/hooks.js:buildHooks",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/pluginUtils.js:getPluginName",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/pluginUtils.js:getFuncPreview",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/pluginUtils.js:getDisplayName",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/reply.js:buildReply",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/request.js:buildRequest",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schemas.js:buildSchemas",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "lib/hooks.js:Hooks",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/request.js:buildRegularRequest",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/request.js:buildRequestWithTrustProxy",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schemas.js:Schemas",
+          "role": "callee",
+          "distance": 2,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 1903
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 5226,
+      "outputTokens": 1918,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 10627.369299999998,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "6PjEaq3CFfDGjuMPybK-yQ0"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/pluginOverride.js",
+      "line": 71,
+      "category": "bug",
+      "severity": "high",
+      "claim": "The refactored `buildRoutePrefix` logic introduces a bug where a double slash is added if the instance prefix ends with `/` and the plugin prefix does not start with `/`.",
+      "evidence": "if (instancePrefix.endsWith('/') && pluginPrefix[0] === '/') {\n    // Remove the extra '/' to avoid: '/first//second'\n    pluginPrefix = pluginPrefix.slice(1)\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }",
+      "suggested_fix": "if (instancePrefix.endsWith('/')) {\n    if (pluginPrefix[0] === '/') {\n      pluginPrefix = pluginPrefix.slice(1)\n    }\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 170,
+        "evidenceLines": 6,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 79,
+        "prChangedLines": 143,
+        "prFiles": 2,
+        "symbolCallers": 1,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: The refactored `buildRoutePrefix` logic introduces a bug where a double slash is added if the instance prefix ends with `/` and the plugin prefix does not start with `/`.\n\n```\nif (instancePrefix.endsWith('/') && pluginPrefix[0] === '/') {\n    // Remove the extra '/' to avoid: '/first//second'\n    pluginPrefix = pluginPrefix.slice(1)\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }\n```\n\n**Suggested fix:** if (instancePrefix.endsWith('/')) {\n    if (pluginPrefix[0] === '/') {\n      pluginPrefix = pluginPrefix.slice(1)\n    }\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/pluginOverride.js",
+      "line": 71,
+      "category": "bug",
+      "severity": "high",
+      "claim": "The refactored `buildRoutePrefix` logic introduces a bug where a double slash is added if the instance prefix ends with `/` and the plugin prefix does not start with `/`.",
+      "evidence": "if (instancePrefix.endsWith('/') && pluginPrefix[0] === '/') {\n    // Remove the extra '/' to avoid: '/first//second'\n    pluginPrefix = pluginPrefix.slice(1)\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }",
+      "suggested_fix": "if (instancePrefix.endsWith('/')) {\n    if (pluginPrefix[0] === '/') {\n      pluginPrefix = pluginPrefix.slice(1)\n    }\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 1,
+        "claimChars": 170,
+        "evidenceLines": 6,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 79,
+        "prChangedLines": 143,
+        "prFiles": 2,
+        "symbolCallers": 1,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: The refactored `buildRoutePrefix` logic introduces a bug where a double slash is added if the instance prefix ends with `/` and the plugin prefix does not start with `/`.\n\n```\nif (instancePrefix.endsWith('/') && pluginPrefix[0] === '/') {\n    // Remove the extra '/' to avoid: '/first//second'\n    pluginPrefix = pluginPrefix.slice(1)\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }\n```\n\n**Suggested fix:** if (instancePrefix.endsWith('/')) {\n    if (pluginPrefix[0] === '/') {\n      pluginPrefix = pluginPrefix.slice(1)\n    }\n  } else if (pluginPrefix[0] !== '/') {\n    pluginPrefix = '/' + pluginPrefix\n  }"
+    }
+  ],
+  "startedAt": "2026-10-06T13:34:27.045Z",
+  "finishedAt": "2026-10-06T13:34:41.731Z"
+}

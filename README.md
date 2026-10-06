@@ -4,7 +4,8 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 7, learned filter.** Six context strategies review pull requests, Benchmark A
+> **Status: Phase 8 in progress (feedback, repository settings, limits done; dashboard and
+> deployment not started).** Six context strategies review pull requests, Benchmark A
 > (1,022 bug-introducing changes) is built, the harness runs and scores ablations over it, and
 > the usefulness filter (features, training, scoring service) is implemented. No ablation has
 > been run at full size and no filter has been trained on real data yet. See
@@ -52,7 +53,43 @@ config) pair is reviewed at most once. [ADR 0003](docs/adr/0003-llm-layer-and-re
 has the details.
 
 Only the `opened` and `synchronize` actions on `pull_request` start a review. The API answers
-`ping` and ignores all other events.
+`ping` and ignores events it has no use for.
+
+### Feedback on posted comments
+
+The app records what happens to each comment it posts, as training data for the filter:
+
+| Event                                | Recorded                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| A later push to the pull request     | `resolved_with_change` if lines within 3 of the comment changed           |
+| The comment's thread is resolved     | `dismissed`, unless its lines had changed                                 |
+| The pull request is merged or closed | `thumbs_up` / `thumbs_down` from reactions; `ignored` if nothing happened |
+
+`pnpm export:feedback feedback.jsonl` writes the labeled comments for
+`rlfilter dataset --feedback`. [ADR 0010](docs/adr/0010-feedback-policy-limits.md) has the rules.
+
+### Repository settings: `.reviewlens.yml`
+
+A repository can tune its reviews with a file at its root. Every key is optional:
+
+```yaml
+enabled: true # false switches reviews off
+max_comments: 5 # at most this many comments per review
+min_severity: medium # low | medium | high | critical
+categories: [bug, security, error-handling] # post only these
+ignore: # paths left out of the review
+  - 'docs/**'
+  - '*.generated.ts'
+```
+
+The file is read from the pull request's base branch, so a pull request cannot change the
+rules it is reviewed under. A file with a mistake in it is ignored as a whole.
+
+### Usage limits
+
+Before any LLM call the worker skips a review when the repository has had too many reviews
+in the last 24 hours, the installation has spent too much, or the change is too large. See
+`MAX_*` under [Configuration](#configuration).
 
 ## Repository layout
 
@@ -101,8 +138,9 @@ A later phase adds `apps/dashboard`.
    - Pull requests: **Read and write**
    - Contents: **Read-only**
    - Metadata: **Read-only** (GitHub makes this mandatory)
-5. Under **Subscribe to events**, select **Pull request**, **Pull request review comment** and
-   **Push**. Push events to the default branch keep the repository's symbol index current.
+5. Under **Subscribe to events**, select **Pull request**, **Pull request review comment**,
+   **Pull request review thread** and **Push**. Push events to the default branch keep the
+   repository's symbol index current; review-thread events record dismissed comments.
 6. Create the app. Note the **App ID**.
 7. Generate a private key and save the `.pem` file as `reviewlens.private-key.pem` in the repo
    root. `*.pem` files are gitignored.
@@ -240,26 +278,30 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 
 ## Configuration
 
-| Variable                      | Used by | Default                  | Notes                                                        |
-| ----------------------------- | ------- | ------------------------ | ------------------------------------------------------------ |
-| `GITHUB_WEBHOOK_SECRET`       | api     | (required)               | Must match the App's webhook secret                          |
-| `GITHUB_APP_ID`               | worker  | (required)               |                                                              |
-| `GITHUB_APP_PRIVATE_KEY_PATH` | worker  |                          | Path to the `.pem` file                                      |
-| `GITHUB_APP_PRIVATE_KEY`      | worker  |                          | Inline key; `\n` escapes allowed; preferred over the path    |
-| `REDIS_URL`                   | both    | `redis://localhost:6379` |                                                              |
-| `PORT`, `HOST`                | api     | `3000`, `0.0.0.0`        |                                                              |
-| `WORKER_CONCURRENCY`          | worker  | `4`                      |                                                              |
-| `DATABASE_URL`                | worker  | (required)               | Postgres connection string                                   |
-| `LLM_PROVIDER`                | worker  | `gemini`                 | `gemini` or `anthropic`                                      |
-| `GEMINI_API_KEYS`             | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
-| `GEMINI_FREE_TIER`            | worker  | `true`                   | Record cost as 0                                             |
-| `ANTHROPIC_API_KEY`           | worker  | (required for anthropic) |                                                              |
-| `REVIEW_STRATEGY`             | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                      |
-| `INDEX_EMBEDDINGS`            | worker  | `false`                  | Embed indexed symbols into pgvector on each push             |
-| `REVIEW_MODEL`                | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
-| `REVIEW_FALLBACK_MODELS`      | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
-| `LLM_CACHE_DIR`               | worker  | (unset)                  | On-disk LLM response cache                                   |
-| `FILTER_URL`                  | worker  | (unset)                  | Filter service base URL                                      |
-| `REVIEW_FILTER_THRESHOLD`     | worker  | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
-| `LOG_LEVEL`                   | both    | `info`                   |                                                              |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                           |
+| Variable                                | Used by | Default                  | Notes                                                        |
+| --------------------------------------- | ------- | ------------------------ | ------------------------------------------------------------ |
+| `GITHUB_WEBHOOK_SECRET`                 | api     | (required)               | Must match the App's webhook secret                          |
+| `GITHUB_APP_ID`                         | worker  | (required)               |                                                              |
+| `GITHUB_APP_PRIVATE_KEY_PATH`           | worker  |                          | Path to the `.pem` file                                      |
+| `GITHUB_APP_PRIVATE_KEY`                | worker  |                          | Inline key; `\n` escapes allowed; preferred over the path    |
+| `REDIS_URL`                             | both    | `redis://localhost:6379` |                                                              |
+| `PORT`, `HOST`                          | api     | `3000`, `0.0.0.0`        |                                                              |
+| `WORKER_CONCURRENCY`                    | worker  | `4`                      |                                                              |
+| `DATABASE_URL`                          | worker  | (required)               | Postgres connection string                                   |
+| `LLM_PROVIDER`                          | worker  | `gemini`                 | `gemini` or `anthropic`                                      |
+| `GEMINI_API_KEYS`                       | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
+| `GEMINI_FREE_TIER`                      | worker  | `true`                   | Record cost as 0                                             |
+| `ANTHROPIC_API_KEY`                     | worker  | (required for anthropic) |                                                              |
+| `REVIEW_STRATEGY`                       | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                      |
+| `INDEX_EMBEDDINGS`                      | worker  | `false`                  | Embed indexed symbols into pgvector on each push             |
+| `REVIEW_MODEL`                          | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
+| `REVIEW_FALLBACK_MODELS`                | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
+| `LLM_CACHE_DIR`                         | worker  | (unset)                  | On-disk LLM response cache                                   |
+| `FILTER_URL`                            | worker  | (unset)                  | Filter service base URL                                      |
+| `REVIEW_FILTER_THRESHOLD`               | worker  | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
+| `MAX_REVIEWS_PER_REPO_PER_DAY`          | worker  | `100`                    | Reviews per repository in 24 hours; 0 = no limit             |
+| `MAX_COST_USD_PER_INSTALLATION_PER_DAY` | worker  | `0` (no limit)           | LLM cost per installation in 24 hours                        |
+| `MAX_PR_CHANGED_LINES`                  | worker  | `5000`                   | Larger pull requests are not reviewed; 0 = no limit          |
+| `MAX_PR_CHANGED_FILES`                  | worker  | `200`                    | Same, by number of files                                     |
+| `LOG_LEVEL`                             | both    | `info`                   |                                                              |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`           | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                           |

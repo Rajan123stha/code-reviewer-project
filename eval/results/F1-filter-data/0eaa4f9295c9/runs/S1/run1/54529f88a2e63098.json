@@ -1,0 +1,161 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 7770,
+    "diffFiles": {
+      "included": [
+        "lib/adapters/xhr.js",
+        "lib/helpers/cookies.js",
+        "lib/helpers/isURLSameOrigin.js",
+        "lib/platform/browser/index.js",
+        "lib/platform/common/utils.js",
+        "lib/platform/index.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "lib/adapters/xhr.js",
+        "lib/helpers/cookies.js",
+        "lib/helpers/isURLSameOrigin.js",
+        "lib/platform/browser/index.js",
+        "lib/platform/common/utils.js",
+        "lib/platform/index.js"
+      ],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.5-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 8340,
+      "outputTokens": 2786,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 84255.9556,
+    "attempts": 3,
+    "cached": false,
+    "requestId": "lPfEaoy2Bp_z4-EP_KeBqAo"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/platform/browser/index.js",
+      "line": 5,
+      "category": "bug",
+      "severity": "critical",
+      "claim": "The browser-specific platform entry point no longer exports `hasStandardBrowserEnv` or `hasStandardBrowserWebWorkerEnv`, which will cause them to be undefined in browser bundles and break features like XSRF protection and FormData content-type handling.",
+      "evidence": "export default {\n  isBrowser: true,\n  classes: {",
+      "suggested_fix": "import URLSearchParams from './classes/URLSearchParams.js'\nimport FormData from './classes/FormData.js'\nimport Blob from './classes/Blob.js'\nimport * as utils from '../common/utils.js'\n\nexport default {\n  isBrowser: true,\n  ...utils,\n  classes: {\n    URLSearchParams,\n    FormData,\n    Blob\n  },\n  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']\n};",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "critical",
+        "confidence": 1,
+        "claimChars": 253,
+        "evidenceLines": 3,
+        "hasFix": true,
+        "evidenceInAddedLines": false,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": false,
+        "fileChangedLines": 51,
+        "prChangedLines": 112,
+        "prFiles": 6,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (critical)**: The browser-specific platform entry point no longer exports `hasStandardBrowserEnv` or `hasStandardBrowserWebWorkerEnv`, which will cause them to be undefined in browser bundles and break features like XSRF protection and FormData content-type handling.\n\n```\nexport default {\n  isBrowser: true,\n  classes: {\n```\n\n**Suggested fix:** import URLSearchParams from './classes/URLSearchParams.js'\nimport FormData from './classes/FormData.js'\nimport Blob from './classes/Blob.js'\nimport * as utils from '../common/utils.js'\n\nexport default {\n  isBrowser: true,\n  ...utils,\n  classes: {\n    URLSearchParams,\n    FormData,\n    Blob\n  },\n  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']\n};"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/platform/browser/index.js",
+      "line": 5,
+      "category": "bug",
+      "severity": "critical",
+      "claim": "The browser-specific platform entry point no longer exports `hasStandardBrowserEnv` or `hasStandardBrowserWebWorkerEnv`, which will cause them to be undefined in browser bundles and break features like XSRF protection and FormData content-type handling.",
+      "evidence": "export default {\n  isBrowser: true,\n  classes: {",
+      "suggested_fix": "import URLSearchParams from './classes/URLSearchParams.js'\nimport FormData from './classes/FormData.js'\nimport Blob from './classes/Blob.js'\nimport * as utils from '../common/utils.js'\n\nexport default {\n  isBrowser: true,\n  ...utils,\n  classes: {\n    URLSearchParams,\n    FormData,\n    Blob\n  },\n  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']\n};",
+      "confidence": 1,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "critical",
+        "confidence": 1,
+        "claimChars": 253,
+        "evidenceLines": 3,
+        "hasFix": true,
+        "evidenceInAddedLines": false,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": false,
+        "fileChangedLines": 51,
+        "prChangedLines": 112,
+        "prFiles": 6,
+        "symbolCallers": null,
+        "strategy": "S1",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (critical)**: The browser-specific platform entry point no longer exports `hasStandardBrowserEnv` or `hasStandardBrowserWebWorkerEnv`, which will cause them to be undefined in browser bundles and break features like XSRF protection and FormData content-type handling.\n\n```\nexport default {\n  isBrowser: true,\n  classes: {\n```\n\n**Suggested fix:** import URLSearchParams from './classes/URLSearchParams.js'\nimport FormData from './classes/FormData.js'\nimport Blob from './classes/Blob.js'\nimport * as utils from '../common/utils.js'\n\nexport default {\n  isBrowser: true,\n  ...utils,\n  classes: {\n    URLSearchParams,\n    FormData,\n    Blob\n  },\n  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']\n};"
+    }
+  ],
+  "startedAt": "2026-10-06T13:28:30.560Z",
+  "finishedAt": "2026-10-06T13:29:54.886Z"
+}
