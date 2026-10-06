@@ -45,7 +45,15 @@ const GOOD_COMMENT = {
 
 const logger = createLogger('test', { level: 'silent' });
 
-function fakeGitHub(opts: { headSha?: string; state?: string; postError?: Error } = {}) {
+function fakeGitHub(
+  opts: {
+    headSha?: string;
+    state?: string;
+    postError?: Error;
+    policy?: string;
+    diff?: string;
+  } = {},
+) {
   const request = vi.fn(async (route: string, params: Record<string, unknown>) => {
     if (route === 'GET /repos/{owner}/{repo}/pulls/{pull_number}') {
       return {
@@ -59,8 +67,21 @@ function fakeGitHub(opts: { headSha?: string; state?: string; postError?: Error 
         },
       };
     }
-    if (route === 'GET /repos/{owner}/{repo}/compare/{basehead}') return { data: DIFF };
-    if (route === 'GET /repos/{owner}/{repo}/contents/{path}') return { data: FILE };
+    if (route === 'GET /repos/{owner}/{repo}/compare/{basehead}') {
+      return { data: opts.diff ?? DIFF };
+    }
+    if (route === 'GET /repos/{owner}/{repo}/contents/{path}') {
+      if (params.path !== '.reviewlens.yml') return { data: FILE };
+      if (opts.policy === undefined) throw Object.assign(new Error('Not Found'), { status: 404 });
+      return { data: opts.policy };
+    }
+    if (route === 'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments') {
+      // GitHub echoes back the comments of the review that was just posted.
+      const post = request.mock.calls.find(([r]) => r.startsWith('POST'))![1] as {
+        comments: { path: string; body: string }[];
+      };
+      return { data: post.comments.map((c, i) => ({ id: 900 + i, path: c.path, body: c.body })) };
+    }
     if (opts.postError) throw opts.postError;
     return { data: { id: 77, html_url: 'https://github.com/x' }, params };
   });
@@ -136,6 +157,76 @@ describe('processReviewJob', () => {
       'GET /repos/{owner}/{repo}/contents/{path}',
       expect.objectContaining({ path: 'src/a.ts', ref: HEAD }),
     );
+  });
+
+  it('reads the repository policy from the base commit and applies it', async () => {
+    const t = deps([GOOD_COMMENT], fakeGitHub({ policy: 'min_severity: critical\n' }));
+    const result = await processReviewJob(job, t.deps);
+    expect(result).toMatchObject({ status: 'posted', comments: 0 });
+    expect(t.store.runs[0]!.candidates.map((c) => c.status)).toEqual(['suppressed']);
+    expect(t.gh.request).toHaveBeenCalledWith(
+      'GET /repos/{owner}/{repo}/contents/{path}',
+      expect.objectContaining({ path: '.reviewlens.yml', ref: BASE }),
+    );
+  });
+
+  it('skips repositories that switched reviews off', async () => {
+    const t = deps([GOOD_COMMENT], fakeGitHub({ policy: 'enabled: false\n' }));
+    expect(await processReviewJob(job, t.deps)).toEqual({ status: 'skipped', reason: 'disabled' });
+    expect(t.provider.requests).toHaveLength(0);
+    expect(t.store.store.startReview).not.toHaveBeenCalled();
+  });
+
+  it('reviews with defaults when the policy file is invalid', async () => {
+    const t = deps([GOOD_COMMENT], fakeGitHub({ policy: 'enabled: maybe\n' }));
+    expect(await processReviewJob(job, t.deps)).toMatchObject({ status: 'posted', comments: 1 });
+  });
+
+  function feedbackStore(reviews = 0, costUsd = 0) {
+    return {
+      setCommentIds: vi.fn(async () => {}),
+      usageSince: vi.fn(async () => ({
+        repository: { reviews, costUsd },
+        installation: { reviews, costUsd },
+      })),
+    };
+  }
+  const limits = {
+    maxReviewsPerRepoPerDay: 10,
+    maxCostUsdPerInstallationPerDay: 2,
+    maxChangedLines: 100,
+    maxChangedFiles: 10,
+  };
+
+  it('records which GitHub comment each posted candidate became', async () => {
+    const t = deps([GOOD_COMMENT, { ...GOOD_COMMENT, line: 1, claim: 'bogus line' }]);
+    const feedback = feedbackStore();
+    await processReviewJob(job, { ...t.deps, feedback, limits });
+    expect(feedback.setCommentIds).toHaveBeenCalledExactlyOnceWith(1, [
+      { index: 0, githubCommentId: 900 },
+    ]);
+  });
+
+  it.each([
+    ['rate_limited', 10, 0],
+    ['budget_exceeded', 1, 2],
+  ] as const)('skips with %s when recent usage is at the limit', async (reason, reviews, cost) => {
+    const t = deps([GOOD_COMMENT]);
+    const feedback = feedbackStore(reviews, cost);
+    expect(await processReviewJob(job, { ...t.deps, feedback, limits })).toEqual({
+      status: 'skipped',
+      reason,
+    });
+    expect(t.provider.requests).toHaveLength(0);
+    expect(t.store.store.startReview).not.toHaveBeenCalled();
+  });
+
+  it('skips pull requests over the size limit before any LLM call', async () => {
+    const big = DIFF.replace('+const y = x / 0;\n', '+const y = x / 0;\n'.repeat(101));
+    const t = deps([GOOD_COMMENT], fakeGitHub({ diff: big }));
+    const result = await processReviewJob(job, { ...t.deps, feedback: feedbackStore(), limits });
+    expect(result).toEqual({ status: 'skipped', reason: 'too_large' });
+    expect(t.provider.requests).toHaveLength(0);
   });
 
   it('posts nothing when no comment survives, but still finalizes the review', async () => {

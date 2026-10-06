@@ -1,8 +1,11 @@
 import {
+  FEEDBACK_JOB_NAME,
+  feedbackJobId,
   INDEX_JOB_NAME,
   indexJobId,
   REVIEW_JOB_NAME,
   reviewJobId,
+  type FeedbackJobData,
   type IndexJobData,
   type ReviewJobData,
 } from '@reviewlens/shared';
@@ -17,6 +20,15 @@ export type IndexQueue = JobQueue<IndexJobData>;
 
 export type EnqueueReview = (data: ReviewJobData) => Promise<{ jobId: string }>;
 export type EnqueueIndex = (data: IndexJobData) => Promise<{ jobId: string }>;
+export type FeedbackQueue = JobQueue<FeedbackJobData>;
+export type EnqueueFeedback = (data: FeedbackJobData) => Promise<{ jobId: string }>;
+
+export const FEEDBACK_JOB_OPTIONS = {
+  attempts: 5,
+  backoff: { type: 'exponential', delay: 10_000 },
+  removeOnComplete: { count: 1_000 },
+  removeOnFail: { count: 5_000 },
+} satisfies JobsOptions;
 
 export const REVIEW_JOB_OPTIONS = {
   attempts: 3,
@@ -77,4 +89,11 @@ export function createEnqueueIndex(
   timeoutMs = DEFAULT_ENQUEUE_TIMEOUT_MS,
 ): EnqueueIndex {
   return enqueuer(queue, INDEX_JOB_NAME, indexJobId, INDEX_JOB_OPTIONS, timeoutMs);
+}
+
+export function createEnqueueFeedback(
+  queue: FeedbackQueue,
+  timeoutMs = DEFAULT_ENQUEUE_TIMEOUT_MS,
+): EnqueueFeedback {
+  return enqueuer(queue, FEEDBACK_JOB_NAME, feedbackJobId, FEEDBACK_JOB_OPTIONS, timeoutMs);
 }

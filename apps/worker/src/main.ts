@@ -1,6 +1,7 @@
 import {
   createDb,
   addFixCommits,
+  createFeedbackStore,
   createReviewStore,
   DbEmbeddingCache,
   DbParseCache,
@@ -23,10 +24,13 @@ import {
   logEnv,
   parseEnv,
   redisEnv,
+  FEEDBACK_QUEUE,
+  feedbackJobSchema,
   INDEX_QUEUE,
   indexJobSchema,
   REVIEW_QUEUE,
   reviewJobSchema,
+  type FeedbackJobData,
   type IndexJobData,
   shutdownTracing,
   type ReviewJobData,
@@ -34,6 +38,7 @@ import {
 import { Worker } from 'bullmq';
 import { BullMQOtel } from 'bullmq-otel';
 import { z } from 'zod';
+import { processFeedbackJob } from './feedback.js';
 import { processIndexJob } from './index-job.js';
 import { processReviewJob, type ReviewJobResult } from './review.js';
 
@@ -62,6 +67,11 @@ const env = parseEnv(
     FILTER_URL: z.string().url().optional(),
     /** Drop comments the filter scores below this (0 to 1). Unset: filter off. */
     REVIEW_FILTER_THRESHOLD: z.coerce.number().min(0).max(1).optional(),
+    /** Usage limits; set a value to 0 to switch that limit off. */
+    MAX_REVIEWS_PER_REPO_PER_DAY: z.coerce.number().int().min(0).default(100),
+    MAX_COST_USD_PER_INSTALLATION_PER_DAY: z.coerce.number().min(0).default(0),
+    MAX_PR_CHANGED_LINES: z.coerce.number().int().min(0).default(5000),
+    MAX_PR_CHANGED_FILES: z.coerce.number().int().min(0).default(200),
     WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   }),
 );
@@ -94,6 +104,13 @@ const github = createGitHubApp({
 });
 const db = createDb(env.DATABASE_URL);
 const store = createReviewStore(db);
+const feedback = createFeedbackStore(db);
+const limits = {
+  maxReviewsPerRepoPerDay: env.MAX_REVIEWS_PER_REPO_PER_DAY || null,
+  maxCostUsdPerInstallationPerDay: env.MAX_COST_USD_PER_INSTALLATION_PER_DAY || null,
+  maxChangedLines: env.MAX_PR_CHANGED_LINES || null,
+  maxChangedFiles: env.MAX_PR_CHANGED_FILES || null,
+};
 const parseCache = new DbParseCache(db);
 // API keys are read here and never logged; key rotation events name keys as key#N.
 const { llm, embeddings } = createLLMFromEnv(process.env, {
@@ -115,6 +132,8 @@ const worker = new Worker<ReviewJobData, ReviewJobResult>(
       parseCache,
       embeddings,
       scorer,
+      feedback,
+      limits,
       config,
       logger: logger.child({ jobId: job.id, attempt: job.attemptsMade + 1 }),
     }),
@@ -158,6 +177,26 @@ const indexWorker = new Worker<IndexJobData>(
     lockDuration: 300_000,
   },
 );
+// Feedback jobs are a few API calls and database writes.
+const feedbackWorker = new Worker<FeedbackJobData>(
+  FEEDBACK_QUEUE,
+  (job) =>
+    processFeedbackJob(feedbackJobSchema.parse(job.data), {
+      getClient: (id) => github.forInstallation(id),
+      store: feedback,
+      logger: logger.child({ jobId: job.id }),
+    }),
+  {
+    connection: { url: env.REDIS_URL, maxRetriesPerRequest: null },
+    concurrency: 2,
+    telemetry: new BullMQOtel({ tracerName: 'reviewlens-worker' }),
+  },
+);
+feedbackWorker.on('failed', (job, err) =>
+  logger.error({ jobId: job?.id, err }, 'feedback job failed'),
+);
+feedbackWorker.on('error', (err) => logger.error({ err }, 'feedback worker error'));
+
 indexWorker.on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'index job failed'));
 indexWorker.on('error', (err) => logger.error({ err }, 'index worker error'));
 
@@ -179,6 +218,7 @@ async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down; waiting for active jobs');
   await worker.close();
   await indexWorker.close();
+  await feedbackWorker.close();
   await db.$disconnect();
   await shutdownTracing();
   process.exit(0);
