@@ -8,6 +8,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./dashboard-types": {
+      "source": "./src/dashboard-types.ts",
+      "types": "./dist/dashboard-types.d.ts",
+      "default": "./dist/dashboard-types.js"
     }
   },
   "scripts": {
