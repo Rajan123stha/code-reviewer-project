@@ -4,7 +4,7 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 8 in progress (feedback, repository settings, limits done; dashboard and
+> **Status: Phase 8 in progress (feedback, repository settings, limits and dashboard done;
 > deployment not started).** Six context strategies review pull requests, Benchmark A
 > (1,022 bug-introducing changes) is built, the harness runs and scores ablations over it, and
 > the usefulness filter (features, training, scoring service) is implemented. No ablation has
@@ -97,6 +97,7 @@ in the last 24 hours, the installation has spent too much, or the change is too 
 | -------------------------------- | --------------------------------------------------------------------------------------- |
 | `apps/api`                       | Fastify webhook receiver (`/webhooks/github`, `/healthz`)                               |
 | `apps/worker`                    | BullMQ consumer that runs the pipeline and posts reviews                                |
+| `apps/dashboard`                 | Web dashboard: Fastify JSON API and React client (reviews, feedback, experiments)       |
 | `apps/cli`                       | `reviewlens review`: the same pipeline on a local diff or git range                     |
 | `packages/review-core`           | Strategies, prompts, validation, dedupe: `runReview()`                                  |
 | `packages/context-engine`        | tree-sitter parsing, symbol graph, diff mapping, context assembly                       |
@@ -110,8 +111,6 @@ in the last 24 hours, the installation has spent too much, or the change is too 
 | `services/filter`                | Learned usefulness filter (Python): dataset builder, training, FastAPI scoring service  |
 | `infra/`                         | docker-compose, Dockerfile, Postgres init                                               |
 | `docs/`                          | Spec and ADRs                                                                           |
-
-A later phase adds `apps/dashboard`.
 
 ## Prerequisites
 
@@ -265,6 +264,24 @@ To use it in the worker, set `FILTER_URL` and `REVIEW_FILTER_THRESHOLD`.
 [services/filter/README.md](services/filter/README.md) has the features, labels and metrics;
 [ADR 0009](docs/adr/0009-learned-filter.md) records the design.
 
+## Dashboard
+
+A web view of what the reviewer did: reviews with every candidate comment and why it was or
+was not posted, feedback by category and severity, and the scored experiments from
+`eval/results` with their confidence intervals.
+
+```sh
+pnpm dashboard:demo        # synthetic data in an in-memory database: http://127.0.0.1:4000
+pnpm build && pnpm --filter @reviewlens/dashboard start   # against DATABASE_URL
+```
+
+For development, run `pnpm dev:dashboard` (API on port 4000) and
+`pnpm --filter @reviewlens/dashboard dev:client` (Vite on port 5173, proxying `/api`).
+
+It listens on 127.0.0.1 only, unless `DASHBOARD_PASSWORD` is set: review data contains code
+from the reviewed repositories. The demo shows a banner on every page so its synthetic data
+is never mistaken for real results. [ADR 0011](docs/adr/0011-dashboard.md) has the design.
+
 ## Development
 
 ```sh
@@ -278,30 +295,33 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 
 ## Configuration
 
-| Variable                                | Used by | Default                  | Notes                                                        |
-| --------------------------------------- | ------- | ------------------------ | ------------------------------------------------------------ |
-| `GITHUB_WEBHOOK_SECRET`                 | api     | (required)               | Must match the App's webhook secret                          |
-| `GITHUB_APP_ID`                         | worker  | (required)               |                                                              |
-| `GITHUB_APP_PRIVATE_KEY_PATH`           | worker  |                          | Path to the `.pem` file                                      |
-| `GITHUB_APP_PRIVATE_KEY`                | worker  |                          | Inline key; `\n` escapes allowed; preferred over the path    |
-| `REDIS_URL`                             | both    | `redis://localhost:6379` |                                                              |
-| `PORT`, `HOST`                          | api     | `3000`, `0.0.0.0`        |                                                              |
-| `WORKER_CONCURRENCY`                    | worker  | `4`                      |                                                              |
-| `DATABASE_URL`                          | worker  | (required)               | Postgres connection string                                   |
-| `LLM_PROVIDER`                          | worker  | `gemini`                 | `gemini` or `anthropic`                                      |
-| `GEMINI_API_KEYS`                       | worker  | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
-| `GEMINI_FREE_TIER`                      | worker  | `true`                   | Record cost as 0                                             |
-| `ANTHROPIC_API_KEY`                     | worker  | (required for anthropic) |                                                              |
-| `REVIEW_STRATEGY`                       | worker  | `S1`                     | `S0` to `S5` (see the table at the top)                      |
-| `INDEX_EMBEDDINGS`                      | worker  | `false`                  | Embed indexed symbols into pgvector on each push             |
-| `REVIEW_MODEL`                          | worker  | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
-| `REVIEW_FALLBACK_MODELS`                | worker  | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
-| `LLM_CACHE_DIR`                         | worker  | (unset)                  | On-disk LLM response cache                                   |
-| `FILTER_URL`                            | worker  | (unset)                  | Filter service base URL                                      |
-| `REVIEW_FILTER_THRESHOLD`               | worker  | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
-| `MAX_REVIEWS_PER_REPO_PER_DAY`          | worker  | `100`                    | Reviews per repository in 24 hours; 0 = no limit             |
-| `MAX_COST_USD_PER_INSTALLATION_PER_DAY` | worker  | `0` (no limit)           | LLM cost per installation in 24 hours                        |
-| `MAX_PR_CHANGED_LINES`                  | worker  | `5000`                   | Larger pull requests are not reviewed; 0 = no limit          |
-| `MAX_PR_CHANGED_FILES`                  | worker  | `200`                    | Same, by number of files                                     |
-| `LOG_LEVEL`                             | both    | `info`                   |                                                              |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`           | both    | (unset, so tracing off)  | OTLP/HTTP base URL                                           |
+| Variable                                | Used by   | Default                  | Notes                                                        |
+| --------------------------------------- | --------- | ------------------------ | ------------------------------------------------------------ |
+| `GITHUB_WEBHOOK_SECRET`                 | api       | (required)               | Must match the App's webhook secret                          |
+| `GITHUB_APP_ID`                         | worker    | (required)               |                                                              |
+| `GITHUB_APP_PRIVATE_KEY_PATH`           | worker    |                          | Path to the `.pem` file                                      |
+| `GITHUB_APP_PRIVATE_KEY`                | worker    |                          | Inline key; `\n` escapes allowed; preferred over the path    |
+| `REDIS_URL`                             | both      | `redis://localhost:6379` |                                                              |
+| `PORT`, `HOST`                          | api       | `3000`, `0.0.0.0`        |                                                              |
+| `WORKER_CONCURRENCY`                    | worker    | `4`                      |                                                              |
+| `DATABASE_URL`                          | worker    | (required)               | Postgres connection string                                   |
+| `LLM_PROVIDER`                          | worker    | `gemini`                 | `gemini` or `anthropic`                                      |
+| `GEMINI_API_KEYS`                       | worker    | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
+| `GEMINI_FREE_TIER`                      | worker    | `true`                   | Record cost as 0                                             |
+| `ANTHROPIC_API_KEY`                     | worker    | (required for anthropic) |                                                              |
+| `REVIEW_STRATEGY`                       | worker    | `S1`                     | `S0` to `S5` (see the table at the top)                      |
+| `INDEX_EMBEDDINGS`                      | worker    | `false`                  | Embed indexed symbols into pgvector on each push             |
+| `REVIEW_MODEL`                          | worker    | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
+| `REVIEW_FALLBACK_MODELS`                | worker    | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
+| `LLM_CACHE_DIR`                         | worker    | (unset)                  | On-disk LLM response cache                                   |
+| `FILTER_URL`                            | worker    | (unset)                  | Filter service base URL                                      |
+| `REVIEW_FILTER_THRESHOLD`               | worker    | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
+| `MAX_REVIEWS_PER_REPO_PER_DAY`          | worker    | `100`                    | Reviews per repository in 24 hours; 0 = no limit             |
+| `MAX_COST_USD_PER_INSTALLATION_PER_DAY` | worker    | `0` (no limit)           | LLM cost per installation in 24 hours                        |
+| `MAX_PR_CHANGED_LINES`                  | worker    | `5000`                   | Larger pull requests are not reviewed; 0 = no limit          |
+| `DASHBOARD_HOST`                        | dashboard | `127.0.0.1`              | Any other address requires `DASHBOARD_PASSWORD`              |
+| `DASHBOARD_PORT`                        | dashboard | `4000`                   |                                                              |
+| `DASHBOARD_PASSWORD`                    | dashboard | (unset)                  | HTTP basic auth password, 12+ characters                     |
+| `MAX_PR_CHANGED_FILES`                  | worker    | `200`                    | Same, by number of files                                     |
+| `LOG_LEVEL`                             | both      | `info`                   |                                                              |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`           | both      | (unset, so tracing off)  | OTLP/HTTP base URL                                           |
