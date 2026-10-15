@@ -15,6 +15,8 @@
     "test:watch": "vitest",
     "dev:api": "pnpm --filter @reviewlens/api dev",
     "dev:worker": "pnpm --filter @reviewlens/worker dev",
+    "dev:dashboard": "pnpm --filter @reviewlens/dashboard dev:server",
+    "dashboard:demo": "pnpm --filter @reviewlens/dashboard demo",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "export:feedback": "tsx --conditions=source apps/worker/src/export-feedback.ts",
