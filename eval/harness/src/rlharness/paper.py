@@ -185,6 +185,22 @@ def experiment_block(name: str, results: Path) -> str:
             rows,
         )
     )
+    matched = s.get("semantic")
+    if matched:
+        calibration = matched.get("calibration")
+        trust = (
+            f"judge agreement with human labels {pct(calibration['agreement'])}, "
+            f"kappa {calibration['kappa']:.2f} on {calibration['shared']} pairs"
+            if calibration
+            else "the judge is not yet calibrated against human labels"
+        )
+        semantic_rows = ", ".join(
+            f"{arm} {pct(m['recall_at'][k_max]['mean'])}" for arm, m in matched["arms"].items()
+        )
+        lines.append(
+            f"\nSemantic recall@{k_max}, counting only comments an LLM judge found to describe "
+            f"the fixed bug: {semantic_rows} ({trust}; {pct(matched['coverage'])} of pairs judged)."
+        )
     if s.get("comparisons"):
         comp_rows = [
             [

@@ -112,6 +112,21 @@ judge agrees with you (agreement and Cohen's kappa). Report judge-based numbers 
 that calibration. The judge prompt is `packages/review-core/prompts/judge/v1`; it sees the diff
 of the commented file and the comment, never the later fix.
 
+## Semantic recall
+
+Location matching ignores what a comment says. To check that, an LLM judge decides for each
+comment in a ground-truth file whether it describes the bug the later fix corrected:
+
+```sh
+python -m rlharness.cli match experiments/E1-strategies.yaml   # build pairs, run the judge (resumable)
+pnpm label                                                    # you: label a sample under "Bug matching"
+python -m rlharness.cli score experiments/E1-strategies.yaml   # adds semantic recall + calibration
+```
+
+`score` reports semantic recall@k next to location recall, the share of pairs judged, and the
+judge's agreement and Cohen's kappa with your labels. Without labels it says the numbers are
+not calibrated. Details: [ADR 0013](../../docs/adr/0013-semantic-matching.md).
+
 ## Outputs
 
 `score` writes `summary.json` (every number), `report.md` (the tables) and `pareto.png` into the

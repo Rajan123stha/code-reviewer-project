@@ -35,15 +35,36 @@ interface CommentSet {
 interface CommentItem {
   id: string;
   path: string;
-  diff: string;
   line: number;
   category: string;
-  severity: string;
   claim: string;
   evidence: string;
-  suggested_fix: string | null;
+  suggested_fix?: string | null;
+  severity?: string;
+  diff?: string;
+  /** Bug-matching pairs only: the later fix the comment is compared with. */
+  fix_subject?: string;
+  fix_diff?: string;
+  truth_lines?: number[];
   verdict: string | null;
 }
+
+export type SampleKind = 'comments' | 'matches';
+
+const KIND_TEXT: Record<SampleKind, { title: string; sub: string; empty: string; hint: string }> = {
+  comments: {
+    title: 'Comment precision',
+    sub: 'Are the comments the reviewer posted any good?',
+    empty: 'Sample some with `python -m rlharness.cli comments <experiment.yaml>`.',
+    hint: 'The strategy that wrote each comment is hidden.',
+  },
+  matches: {
+    title: 'Bug matching',
+    sub: 'Does a comment near a known bug describe that bug?',
+    empty: 'Build pairs with `python -m rlharness.cli match <experiment.yaml>`.',
+    hint: 'Calibrates the LLM judge behind semantic recall.',
+  },
+};
 
 const VERDICT_TONE: Record<string, Tone> = {
   valid: 'good',
@@ -192,6 +213,7 @@ function Progress({ done, total }: { done: number; total: number }) {
 export function LabelsPage() {
   const cases = useApi<CaseList>('/api/labels/benchmark');
   const sets = useApi<CommentSet[]>('/api/labels/comments');
+  const matchSets = useApi<CommentSet[]>('/api/labels/matches');
   if (cases.error?.startsWith('not found')) {
     return (
       <Card>
@@ -240,30 +262,36 @@ export function LabelsPage() {
             <Empty title="Loading…" />
           )}
         </Card>
-        <Card title="Comment precision" sub="Are the comments the reviewer posted any good?">
-          {!sets.data ? (
-            <Empty title="Loading…" />
-          ) : sets.data.length === 0 ? (
-            <Empty title="No sampled comments">
-              Sample some with `python -m rlharness.cli comments &lt;experiment.yaml&gt;`.
-            </Empty>
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>
-              {sets.data.map((s) => (
-                <div key={`${s.name}/${s.hash}`} className="row">
-                  <a href={href(`labels/comments/${s.name}/${s.hash}`)} className="cell-title">
-                    {s.name}
-                  </a>
-                  <span className="chip mono">{s.hash}</span>
-                  <span className="spacer" />
-                  <Progress done={s.labeled} total={s.total} />
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+        <SetsCard kind="comments" sets={sets.data} />
+        <SetsCard kind="matches" sets={matchSets.data} />
       </div>
     </div>
+  );
+}
+
+function SetsCard({ kind, sets }: { kind: SampleKind; sets: CommentSet[] | undefined }) {
+  const text = KIND_TEXT[kind];
+  return (
+    <Card title={text.title} sub={text.sub}>
+      {!sets ? (
+        <Empty title="Loading…" />
+      ) : sets.length === 0 ? (
+        <Empty title="Nothing sampled yet">{text.empty}</Empty>
+      ) : (
+        <div className="stack" style={{ gap: 12 }}>
+          {sets.map((s) => (
+            <div key={`${s.name}/${s.hash}`} className="row">
+              <a href={href(`labels/${kind}/${s.name}/${s.hash}`)} className="cell-title">
+                {s.name}
+              </a>
+              <span className="chip mono">{s.hash}</span>
+              <span className="spacer" />
+              <Progress done={s.labeled} total={s.total} />
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -450,9 +478,21 @@ function LabelFooter(props: {
 
 // --- Comment labeling -----------------------------------------------------------------------
 
-export function CommentLabelPage({ name, hash, id }: { name: string; hash: string; id?: string }) {
-  const base = `/api/labels/comments/${encodeURIComponent(name)}/${encodeURIComponent(hash)}`;
-  const set = useApi<{ guide: Record<string, string>; items: CommentItem[] }>(base);
+export function CommentLabelPage({
+  kind,
+  name,
+  hash,
+  id,
+}: {
+  kind: SampleKind;
+  name: string;
+  hash: string;
+  id?: string | undefined;
+}) {
+  const base = `/api/labels/${kind}/${encodeURIComponent(name)}/${encodeURIComponent(hash)}`;
+  const set = useApi<{ guide: Record<string, string>; verdicts: string[]; items: CommentItem[] }>(
+    base,
+  );
   const [labeler, setLabeler] = useLabeler();
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -463,7 +503,7 @@ export function CommentLabelPage({ name, hash, id }: { name: string; hash: strin
     id ? items.findIndex((i) => i.id === id) : items.findIndex((i) => i.verdict === null),
   );
   const item = items[position];
-  const route = (i: CommentItem) => href(`labels/comments/${name}/${hash}/${i.id}`);
+  const route = (i: CommentItem) => href(`labels/${kind}/${name}/${hash}/${i.id}`);
   useEffect(() => {
     setNote('');
     setError(undefined);
@@ -500,11 +540,11 @@ export function CommentLabelPage({ name, hash, id }: { name: string; hash: strin
     <div className="stack">
       <PageHead
         crumbs={<a href={href('labels')}>Labeling</a>}
-        title={`${name}: comment ${position + 1} of ${items.length}`}
+        title={`${name}: ${kind === 'matches' ? 'pair' : 'comment'} ${position + 1} of ${items.length}`}
         description={
           <span className="row">
             <Progress done={done} total={items.length} />
-            <span className="cell-sub">The strategy that wrote each comment is hidden.</span>
+            <span className="cell-sub">{KIND_TEXT[kind].hint}</span>
           </span>
         }
         actions={<LabelerField name={labeler} onChange={setLabeler} />}
@@ -525,7 +565,10 @@ export function CommentLabelPage({ name, hash, id }: { name: string; hash: strin
             {item.path}:{item.line}
           </span>
         }
-        sub={`${humanize(item.severity)} · ${humanize(item.category)}`}
+        sub={[item.severity, item.category]
+          .filter(Boolean)
+          .map((v) => humanize(v!))
+          .join(' · ')}
       >
         <p style={{ marginTop: 0 }}>{item.claim}</p>
         <pre className="code">{item.evidence}</pre>
@@ -538,16 +581,29 @@ export function CommentLabelPage({ name, hash, id }: { name: string; hash: strin
           <Badge tone={VERDICT_TONE[item.verdict] ?? 'neutral'}>labeled {item.verdict}</Badge>
         )}
       </Card>
-      <Card title="Diff of the commented file" sub={`line ${item.line} highlighted`}>
-        <DiffView diff={item.diff} highlight={item.line} />
-      </Card>
+      {item.diff !== undefined && (
+        <Card title="Diff of the commented file" sub={`line ${item.line} highlighted`}>
+          <DiffView diff={item.diff} highlight={item.line} />
+        </Card>
+      )}
+      {item.fix_diff !== undefined && (
+        <Card
+          title="The later fix"
+          sub={`lines it changed in this file: ${(item.truth_lines ?? []).join(', ') || 'none'}`}
+        >
+          <p className="secondary" style={{ marginTop: 0 }}>
+            {item.fix_subject}
+          </p>
+          <DiffView diff={item.fix_diff} />
+        </Card>
+      )}
       <LabelFooter
         error={error}
         note={note}
         onNote={setNote}
         bar={
           <VerdictBar
-            verdicts={['valid', 'nitpick', 'invalid']}
+            verdicts={set.data.verdicts}
             guide={set.data.guide}
             current={item.verdict}
             disabled={saving}

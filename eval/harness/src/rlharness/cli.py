@@ -7,6 +7,7 @@ rlharness label <experiment.yaml>     label sampled comments (valid / nitpick / 
 rlharness judge <experiment.yaml>     run the LLM judge over the sampled comments
 rlharness paper                       regenerate docs/paper.md from the result files
 rlharness plan <experiment.yaml>      model calls still needed, and days on your keys
+rlharness match <experiment.yaml>     judge whether comments near a bug describe it
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from rlbench import manifest as manifest_io
 from rlbench import validation
 
 from . import comments as comments_mod
-from . import filtercheck, paper, plan, report, spec
+from . import filtercheck, paper, plan, report, semantic, spec
 from .metrics import load_arm
 from .runner import DEFAULT_CLI, REPO_ROOT, CliReviewer, repo_dir, run_experiment
 
@@ -200,6 +201,31 @@ def cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_match(args: argparse.Namespace) -> int:
+    experiment, _manifest, inputs, cases = prepare(args.experiment)
+    results = results_dir(experiment, args.results)
+    loaded = {a.id: load_arm(experiment, a, inputs, cases, results) for a in experiment.arms}
+    items = semantic.build_items(semantic.pairs(loaded, cases, max(experiment.k)), cases, repo_dir)
+    path = semantic.write_items(results, items)
+    print(f"{len(items)} comment-bug pairs -> {path}")
+    if args.build_only or not items:
+        return 0
+    cmd = [
+        "node",
+        str(args.cli),
+        "match",
+        "--in",
+        str(path),
+        "--out",
+        str(semantic.matches_dir(results) / "judge.jsonl"),
+    ]
+    if args.fake_llm:
+        cmd += ["--fake-llm", "scripted"]
+    if args.model:
+        cmd += ["--model", args.model]
+    return subprocess.run(cmd, cwd=REPO_ROOT).returncode
+
+
 def cmd_paper(args: argparse.Namespace) -> int:
     out = paper.write(args.out)
     print(f"wrote {out}")
@@ -247,6 +273,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model")
     p.add_argument("--fake-llm", action="store_true")
     p.set_defaults(func=cmd_judge)
+
+    p = sub.add_parser("match", help="judge whether comments near a bug describe it")
+    common(p)
+    p.add_argument("--cli", type=Path, default=DEFAULT_CLI)
+    p.add_argument("--model")
+    p.add_argument("--fake-llm", action="store_true")
+    p.add_argument("--build-only", action="store_true", help="write the pairs; call no model")
+    p.set_defaults(func=cmd_match)
 
     p = sub.add_parser("plan", help="model calls still needed, and days on your keys")
     common(p)

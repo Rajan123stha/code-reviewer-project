@@ -177,6 +177,35 @@ describe('labeling API', { timeout: 30_000 }, () => {
     expect((await app().inject('/api/labels/comments/..%2F..%2Fetc/abc')).statusCode).toBe(404);
   });
 
+  it('labels comment-bug pairs with the fix shown and match verdicts', async () => {
+    const dir = join(paths.results, 'E1', 'abc', 'matches');
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, 'items.jsonl'),
+      `${JSON.stringify({ id: 'p1', case_id: 'case-1', path: 'a.js', line: 3, category: 'bug', claim: 'reads past the end', evidence: 'i <= xs.length', fix_subject: 'fix: off by one', fix_diff: '@@ -3 +3 @@', truth_lines: [3] })}
+`,
+    );
+    const set = (await app().inject('/api/labels/matches/E1/abc')).json<{
+      verdicts: string[];
+      items: Row[];
+    }>();
+    expect(set.verdicts).toEqual(['same_bug', 'different_issue', 'unclear']);
+    expect(set.items[0]).toMatchObject({
+      fix_subject: 'fix: off by one',
+      truth_lines: [3],
+      verdict: null,
+    });
+    expect(
+      (await post('/api/labels/matches/E1/abc/p1', { verdict: 'valid', labeler: 'r' })).statusCode,
+    ).toBe(400);
+    await post('/api/labels/matches/E1/abc/p1', { verdict: 'same_bug', labeler: 'r' });
+    const row = JSON.parse(await readFile(join(dir, 'human.jsonl'), 'utf8')) as Row;
+    expect(row).toMatchObject({ id: 'p1', verdict: 'same_bug', labeler: 'r' });
+    expect((await app().inject('/api/labels/matches')).json<Row[]>()).toEqual([
+      { name: 'E1', hash: 'abc', total: 1, labeled: 1 },
+    ]);
+  });
+
   it('is absent unless enabled', async () => {
     const plain = buildDashboard({ store: null, experiments: noExperiments });
     expect((await plain.inject('/api/labels/benchmark')).statusCode).toBe(404);

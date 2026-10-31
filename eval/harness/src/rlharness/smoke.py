@@ -20,7 +20,8 @@ from typing import Any
 
 from rlbench.cases import BuildConfig, build_repo_cases
 
-from . import report, spec
+from . import report, semantic, spec
+from .metrics import load_arm
 from .runner import DEFAULT_CLI, CliReviewer, run_experiment
 
 CASES = 10
@@ -153,6 +154,28 @@ def _run(workdir: Path, cli: Path) -> dict[str, Any]:
     first = run_experiment(experiment, inputs, results, reviewer, log=lambda _line: None)
     # A second pass must find everything already done: the run is resumable.
     second = run_experiment(experiment, inputs, results, reviewer, log=lambda _line: None)
+    # Semantic matching through the real CLI: the scripted judge says every comment in a
+    # ground-truth file describes the bug, so semantic recall equals file recall.
+    loaded = {a.id: load_arm(experiment, a, inputs, cases, results) for a in experiment.arms}
+    items = semantic.build_items(
+        semantic.pairs(loaded, cases, max(experiment.k)), cases, lambda _name: repo
+    )
+    items_path = semantic.write_items(results, items)
+    subprocess.run(
+        [
+            "node",
+            str(cli),
+            "match",
+            "--in",
+            str(items_path),
+            "--out",
+            str(semantic.matches_dir(results) / "judge.jsonl"),
+            "--fake-llm",
+            "scripted",
+        ],
+        check=True,
+        capture_output=True,
+    )
     summary = report.score(experiment, inputs, cases, results, manifest)
     paths = report.write(summary, results)
 
@@ -172,6 +195,10 @@ def _run(workdir: Path, cli: Path) -> dict[str, Any]:
         checks[f"{name} localization"] = (round(arm["localization_accuracy"], 4), 0.8333)
         checks[f"{name} run sd"] = (arm["recall_at"]["10"]["run_sd"], 0.0)
         checks[f"{name} gt precision"] = (round(arm["ground_truth_precision"], 4), 0.8333)
+    for name, matched in summary["semantic"]["arms"].items():
+        checks[f"{name} semantic recall@10"] = (round(matched["recall_at"]["10"]["mean"], 4), 0.6)
+    checks["semantic coverage"] = (summary["semantic"]["coverage"], 1.0)
+    checks["fix diff in pair"] = ("i <= items.length" in items[0]["fix_diff"], True)
     checks["S3 vs S0 recall difference"] = (summary["comparisons"][0]["recall_diff"], 0.0)
     failures = {k: v for k, v in checks.items() if v[0] != v[1]}
     if failures:

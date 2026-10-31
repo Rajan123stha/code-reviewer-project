@@ -36,8 +36,8 @@ function Page({ parts }: { parts: string[] }) {
     return <ExperimentDetailPage name={id} hash={extra} />;
   if (section === 'experiments') return <ExperimentsPage />;
   if (section === 'labels' && id === 'benchmark' && extra) return <CaseLabelPage id={extra} />;
-  if (section === 'labels' && id === 'comments' && extra && parts[3])
-    return <CommentLabelPage name={extra} hash={parts[3]} id={parts[4]} />;
+  if (section === 'labels' && (id === 'comments' || id === 'matches') && extra && parts[3])
+    return <CommentLabelPage kind={id} name={extra} hash={parts[3]} id={parts[4]} />;
   if (section === 'labels') return <LabelsPage />;
   if (section === '') return <OverviewPage />;
   return (

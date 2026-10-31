@@ -16,6 +16,7 @@ const run = promisify(execFile);
  *   (rlbench.validation.Verdict: case_id, verdict, note, labeler, at)
  * - sampled comments: `eval/results/<name>/<hash>/comments/human.jsonl`
  *   (rlharness.comments.append_human: id, verdict, note, labeler, at)
+ * - comment-bug pairs: `eval/results/<name>/<hash>/matches/human.jsonl` (same fields)
  *
  * Appending is the only write; the last verdict per item wins, so a labeler corrects a
  * label by labeling again. Git is used read-only on the benchmark's clones to show diffs;
@@ -34,6 +35,16 @@ export interface LabelPaths {
 
 export const CASE_VERDICTS = ['valid', 'invalid', 'unsure'] as const;
 export const COMMENT_VERDICTS = ['valid', 'nitpick', 'invalid'] as const;
+
+export const MATCH_VERDICTS = ['same_bug', 'different_issue', 'unclear'] as const;
+
+export const MATCH_GUIDE = {
+  same_bug:
+    'The comment describes the defect the later fix corrects, even in other words or with another fix.',
+  different_issue:
+    'It is about something else: another problem, style, or a nearby but different concern.',
+  unclear: "The fix's purpose or the comment's meaning cannot be told from what is shown.",
+};
 
 export const CASE_GUIDE = {
   valid:
@@ -242,78 +253,125 @@ export const labelRoutes: FastifyPluginAsync<LabelPaths> = async (app, paths) =>
     return row;
   });
 
-  // --- Sampled review comments ------------------------------------------------------------
+  // --- Sampled sets: review comments (precision) and comment-bug pairs (matching) -------------
 
-  const commentsDir = (name: string, hash: string) => join(paths.results, name, hash, 'comments');
+  for (const [kind, set] of Object.entries(SAMPLE_SETS)) {
+    const dir = (name: string, hash: string) => join(paths.results, name, hash, set.dir);
 
-  app.get('/api/labels/comments', async () => {
-    const out = [];
-    for (const name of await safeDirs(paths.results)) {
-      for (const hash of await safeDirs(join(paths.results, name))) {
-        const items = await readJsonl(join(commentsDir(name, hash), 'items.jsonl'));
-        if (items.length === 0) continue;
-        const done = await latest(join(commentsDir(name, hash), 'human.jsonl'), 'id');
-        out.push({
-          name,
-          hash,
-          total: items.length,
-          labeled: items.filter((i) => done.has(String(i.id))).length,
-        });
+    app.get(`/api/labels/${kind}`, async () => {
+      const out = [];
+      for (const name of await safeDirs(paths.results)) {
+        for (const hash of await safeDirs(join(paths.results, name))) {
+          const items = await readJsonl(join(dir(name, hash), 'items.jsonl'));
+          if (items.length === 0) continue;
+          const done = await latest(join(dir(name, hash), 'human.jsonl'), 'id');
+          out.push({
+            name,
+            hash,
+            total: items.length,
+            labeled: items.filter((i) => done.has(String(i.id))).length,
+          });
+        }
       }
-    }
-    return out;
-  });
+      return out;
+    });
 
-  app.get<{ Params: { name: string; hash: string } }>(
-    '/api/labels/comments/:name/:hash',
-    async (req, reply) => {
-      const { name, hash } = req.params;
-      if (!SAFE_NAME.test(name) || !SAFE_NAME.test(hash))
-        return reply.code(404).send({ error: 'not found' });
-      const items = await readJsonl(join(commentsDir(name, hash), 'items.jsonl'));
-      if (items.length === 0) return reply.code(404).send({ error: 'no sampled comments' });
-      const done = await latest(join(commentsDir(name, hash), 'human.jsonl'), 'id');
-      return {
-        guide: COMMENT_GUIDE,
-        // Blind: the arm, run and input that produced a comment are never sent.
-        items: items.map((i) => ({
-          id: i.id,
-          path: i.path,
-          diff: i.diff,
-          line: i.line,
-          category: i.category,
-          severity: i.severity,
-          claim: i.claim,
-          evidence: i.evidence,
-          suggested_fix: i.suggested_fix ?? null,
-          verdict: done.get(String(i.id))?.verdict ?? null,
-        })),
-      };
-    },
-  );
+    app.get<{ Params: { name: string; hash: string } }>(
+      `/api/labels/${kind}/:name/:hash`,
+      async (req, reply) => {
+        const { name, hash } = req.params;
+        if (!SAFE_NAME.test(name) || !SAFE_NAME.test(hash)) {
+          return reply.code(404).send({ error: 'not found' });
+        }
+        const items = await readJsonl(join(dir(name, hash), 'items.jsonl'));
+        if (items.length === 0) return reply.code(404).send({ error: 'nothing sampled' });
+        const done = await latest(join(dir(name, hash), 'human.jsonl'), 'id');
+        return {
+          guide: set.guide,
+          verdicts: set.verdicts,
+          items: items.map((i) => ({
+            ...set.show(i),
+            verdict: done.get(String(i.id))?.verdict ?? null,
+          })),
+        };
+      },
+    );
 
-  app.post<{ Params: { name: string; hash: string; id: string } }>(
-    '/api/labels/comments/:name/:hash/:id',
-    async (req, reply) => {
-      const { name, hash, id } = req.params;
-      if (!SAFE_NAME.test(name) || !SAFE_NAME.test(hash))
-        return reply.code(404).send({ error: 'not found' });
-      const items = await readJsonl(join(commentsDir(name, hash), 'items.jsonl'));
-      if (!items.some((i) => String(i.id) === id))
-        return reply.code(404).send({ error: 'no such comment' });
-      const body = verdictBody(COMMENT_VERDICTS).safeParse(req.body);
-      if (!body.success) return reply.code(400).send({ error: 'invalid verdict' });
-      const row = {
-        id,
-        verdict: body.data.verdict,
-        note: body.data.note,
-        labeler: body.data.labeler,
-        at: new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00'),
-      };
-      await append(join(commentsDir(name, hash), 'human.jsonl'), row);
-      return row;
-    },
-  );
+    app.post<{ Params: { name: string; hash: string; id: string } }>(
+      `/api/labels/${kind}/:name/:hash/:id`,
+      async (req, reply) => {
+        const { name, hash, id } = req.params;
+        if (!SAFE_NAME.test(name) || !SAFE_NAME.test(hash)) {
+          return reply.code(404).send({ error: 'not found' });
+        }
+        const items = await readJsonl(join(dir(name, hash), 'items.jsonl'));
+        if (!items.some((i) => String(i.id) === id)) {
+          return reply.code(404).send({ error: 'no such item' });
+        }
+        const body = verdictBody(set.verdicts).safeParse(req.body);
+        if (!body.success) return reply.code(400).send({ error: 'invalid verdict' });
+        const row = {
+          id,
+          verdict: body.data.verdict,
+          note: body.data.note,
+          labeler: body.data.labeler,
+          at: new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00'),
+        };
+        await append(join(dir(name, hash), 'human.jsonl'), row);
+        return row;
+      },
+    );
+  }
+};
+
+type Item = Record<string, unknown>;
+
+/**
+ * Sampled label sets written by the harness under `eval/results/<name>/<hash>/<dir>/`.
+ * `show` picks what a labeler sees; for comments the arm, run and input stay hidden, so
+ * labels cannot favor a strategy.
+ */
+const SAMPLE_SETS: Record<
+  string,
+  {
+    dir: string;
+    verdicts: readonly string[];
+    guide: Record<string, string>;
+    show: (item: Item) => Item;
+  }
+> = {
+  comments: {
+    dir: 'comments',
+    verdicts: COMMENT_VERDICTS,
+    guide: COMMENT_GUIDE,
+    show: (i) => ({
+      id: i.id,
+      path: i.path,
+      diff: i.diff,
+      line: i.line,
+      category: i.category,
+      severity: i.severity,
+      claim: i.claim,
+      evidence: i.evidence,
+      suggested_fix: i.suggested_fix ?? null,
+    }),
+  },
+  matches: {
+    dir: 'matches',
+    verdicts: MATCH_VERDICTS,
+    guide: MATCH_GUIDE,
+    show: (i) => ({
+      id: i.id,
+      path: i.path,
+      line: i.line,
+      category: i.category,
+      claim: i.claim,
+      evidence: i.evidence,
+      fix_subject: i.fix_subject,
+      fix_diff: i.fix_diff,
+      truth_lines: i.truth_lines,
+    }),
+  },
 };
 
 async function safeDirs(path: string): Promise<string[]> {

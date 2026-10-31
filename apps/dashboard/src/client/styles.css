@@ -249,6 +249,9 @@ h3 {
 .grid.two {
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
 }
+.grid.three {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
 .row {
   display: flex;
   align-items: center;
