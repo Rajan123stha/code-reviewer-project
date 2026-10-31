@@ -1,0 +1,155 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 1211,
+    "diffFiles": {
+      "included": [
+        "lib/transmit.js",
+        "test/transmit.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 55,
+        "filesIndexed": 34,
+        "parsed": 34,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 2606
+      },
+      "symbols": 510,
+      "edges": 136,
+      "callsResolved": 1971,
+      "callsTotal": 7133,
+      "changedSymbols": [
+        "lib/transmit.js:<module>",
+        "test/transmit.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "test/transmit.js:it",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "test/transmit.js:expect",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 94
+    }
+  },
+  "redactions": {
+    "private-key": 1
+  },
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 1989,
+      "outputTokens": 396,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 5569.328600000001,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "7rHlasHLIr_h694P0JCgqA8"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/transmit.js",
+      "line": 224,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Payloads without an explicit content-length header (such as streams or un-measured buffers) will have length 0 and skip compression completely.",
+      "evidence": "var length = response.headers['content-length'] ? parseInt(response.headers['content-length'], 10) : 0;\n...\n    if (encoding &&\n        length &&\n        response._isPayloadSupported()) {",
+      "suggested_fix": "Check whether `content-length` header exists vs is explicitly zero, or check if `length !== 0` when `content-length` is present so chunked stream responses can still be compressed.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "invalid",
+      "rejectReason": "evidence_not_found",
+      "duplicateOf": null,
+      "rank": null,
+      "features": null,
+      "filterScore": null,
+      "body": "**Bug (high)**: Payloads without an explicit content-length header (such as streams or un-measured buffers) will have length 0 and skip compression completely.\n\n```\nvar length = response.headers['content-length'] ? parseInt(response.headers['content-length'], 10) : 0;\n...\n    if (encoding &&\n        length &&\n        response._isPayloadSupported()) {\n```\n\n**Suggested fix:** Check whether `content-length` header exists vs is explicitly zero, or check if `length !== 0` when `content-length` is present so chunked stream responses can still be compressed."
+    },
+    {
+      "file": "lib/transmit.js",
+      "line": 210,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Declaring `ranger` and `compressor` with `var` inside conditional blocks removes them from the outer function scope where they are used to pipe the stream.",
+      "evidence": "var ranger = new Range.Stream(range);\n...\nvar compressor = (encoding === 'gzip' ? Zlib.createGzip() : Zlib.createDeflate());",
+      "suggested_fix": "Keep `var ranger = null;` and `var compressor = null;` declared in the outer function scope before the conditional blocks and assign to them without redeclaring `var`.",
+      "confidence": 0.95,
+      "index": 1,
+      "status": "invalid",
+      "rejectReason": "evidence_not_found",
+      "duplicateOf": null,
+      "rank": null,
+      "features": null,
+      "filterScore": null,
+      "body": "**Bug (high)**: Declaring `ranger` and `compressor` with `var` inside conditional blocks removes them from the outer function scope where they are used to pipe the stream.\n\n```\nvar ranger = new Range.Stream(range);\n...\nvar compressor = (encoding === 'gzip' ? Zlib.createGzip() : Zlib.createDeflate());\n```\n\n**Suggested fix:** Keep `var ranger = null;` and `var compressor = null;` declared in the outer function scope before the conditional blocks and assign to them without redeclaring `var`."
+    }
+  ],
+  "selected": [],
+  "startedAt": "2026-10-31T09:16:26.296Z",
+  "finishedAt": "2026-10-31T09:16:34.560Z"
+}

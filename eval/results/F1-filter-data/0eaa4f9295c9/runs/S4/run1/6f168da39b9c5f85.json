@@ -1,0 +1,316 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 15970,
+    "diffFiles": {
+      "included": [
+        "docs/Reference/Reply.md",
+        "docs/Reference/Routes.md",
+        "docs/Reference/Server.md",
+        "docs/Reference/Validation-and-Serialization.md",
+        "lib/errors.js",
+        "lib/reply.js",
+        "lib/schemas.js",
+        "lib/validation.js",
+        "test/internals/reply-serialize.test.js",
+        "test/schema-serialization.test.js",
+        "types/reply.d.ts",
+        "types/schema.d.ts"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 301,
+        "filesIndexed": 199,
+        "parsed": 13,
+        "fromCache": 186,
+        "unreadable": 0,
+        "durationMs": 1081
+      },
+      "symbols": 1280,
+      "edges": 576,
+      "callsResolved": 2079,
+      "callsTotal": 21167,
+      "changedSymbols": [
+        "lib/errors.js:codes",
+        "lib/reply.js:<module>",
+        "lib/reply.js:preserializeHookEnd",
+        "lib/reply.js:serialize",
+        "lib/schemas.js:<module>",
+        "lib/schemas.js:normalizeSchema",
+        "lib/schemas.js:getSchemaSerializer",
+        "lib/validation.js:compileSchemasForSerialization",
+        "test/internals/reply-serialize.test.js:<module>",
+        "test/internals/reply-serialize.test.js:getResponseSchema",
+        "test/internals/reply-serialize.test.js:custom2",
+        "test/schema-serialization.test.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/reply.js:preserializeHookEnd",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/reply.js:serialize",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/schemas.js:getSchemaSerializer",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/errors.js:codes",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "excerpt"
+        },
+        {
+          "name": "lib/schemas.js:normalizeSchema",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "signature"
+        },
+        {
+          "name": "lib/validation.js:compileSchemasForSerialization",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 1,
+      "omitted": 18,
+      "tokens": 2285
+    }
+  },
+  "redactions": {
+    "assigned-secret": 1
+  },
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 18056,
+      "outputTokens": 347,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 25857.2733,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "obHlasGBPKXs694PjJ6f6QE"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/reply.js",
+      "line": 504,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling reply.send() when no Content-Type header has been set throws a TypeError at runtime when matching content-type serialization functions.",
+      "evidence": "payload = serialize(reply[kRouteContext], payload, reply.raw.statusCode, reply[kReplyHeaders]['content-type'])",
+      "suggested_fix": "Pass a fallback or default content-type string (e.g. `reply[kReplyHeaders]['content-type'] || 'application/json'`) or safely check `contentType` before calling `.split(';')` inside `getSchemaSerializer`.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 143,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 43,
+        "prChangedLines": 617,
+        "prFiles": 12,
+        "symbolCallers": 1,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 2,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling reply.send() when no Content-Type header has been set throws a TypeError at runtime when matching content-type serialization functions.\n\n> `payload = serialize(reply[kRouteContext], payload, reply.raw.statusCode, reply[kReplyHeaders]['content-type'])`\n\n**Suggested fix:** Pass a fallback or default content-type string (e.g. `reply[kReplyHeaders]['content-type'] || 'application/json'`) or safely check `contentType` before calling `.split(';')` inside `getSchemaSerializer`."
+    },
+    {
+      "file": "lib/schemas.js",
+      "line": 164,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling `getSchemaSerializer` when `contentType` is undefined causes an unhandled TypeError when invoking `.split(';')`.",
+      "evidence": "const mediaName = contentType.split(';')[0]",
+      "suggested_fix": "Check if `contentType` is defined before calling `.split(';')`:\n```js\nconst mediaName = contentType ? contentType.split(';')[0] : ''\n```",
+      "confidence": 0.95,
+      "index": 1,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 2,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 120,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 54,
+        "prChangedLines": 617,
+        "prFiles": 12,
+        "symbolCallers": 2,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 2,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling `getSchemaSerializer` when `contentType` is undefined causes an unhandled TypeError when invoking `.split(';')`.\n\n> `const mediaName = contentType.split(';')[0]`\n\n**Suggested fix:** Check if `contentType` is defined before calling `.split(';')`:\n```js\nconst mediaName = contentType ? contentType.split(';')[0] : ''\n```"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/reply.js",
+      "line": 504,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling reply.send() when no Content-Type header has been set throws a TypeError at runtime when matching content-type serialization functions.",
+      "evidence": "payload = serialize(reply[kRouteContext], payload, reply.raw.statusCode, reply[kReplyHeaders]['content-type'])",
+      "suggested_fix": "Pass a fallback or default content-type string (e.g. `reply[kReplyHeaders]['content-type'] || 'application/json'`) or safely check `contentType` before calling `.split(';')` inside `getSchemaSerializer`.",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 143,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 43,
+        "prChangedLines": 617,
+        "prFiles": 12,
+        "symbolCallers": 1,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 2,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling reply.send() when no Content-Type header has been set throws a TypeError at runtime when matching content-type serialization functions.\n\n> `payload = serialize(reply[kRouteContext], payload, reply.raw.statusCode, reply[kReplyHeaders]['content-type'])`\n\n**Suggested fix:** Pass a fallback or default content-type string (e.g. `reply[kReplyHeaders]['content-type'] || 'application/json'`) or safely check `contentType` before calling `.split(';')` inside `getSchemaSerializer`."
+    },
+    {
+      "file": "lib/schemas.js",
+      "line": 164,
+      "category": "bug",
+      "severity": "high",
+      "claim": "Calling `getSchemaSerializer` when `contentType` is undefined causes an unhandled TypeError when invoking `.split(';')`.",
+      "evidence": "const mediaName = contentType.split(';')[0]",
+      "suggested_fix": "Check if `contentType` is defined before calling `.split(';')`:\n```js\nconst mediaName = contentType ? contentType.split(';')[0] : ''\n```",
+      "confidence": 0.95,
+      "index": 1,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 2,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 120,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 54,
+        "prChangedLines": 617,
+        "prFiles": 12,
+        "symbolCallers": 2,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 2,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: Calling `getSchemaSerializer` when `contentType` is undefined causes an unhandled TypeError when invoking `.split(';')`.\n\n> `const mediaName = contentType.split(';')[0]`\n\n**Suggested fix:** Check if `contentType` is defined before calling `.split(';')`:\n```js\nconst mediaName = contentType ? contentType.split(';')[0] : ''\n```"
+    }
+  ],
+  "startedAt": "2026-10-31T09:15:11.398Z",
+  "finishedAt": "2026-10-31T09:15:38.547Z"
+}

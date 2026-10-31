@@ -1,0 +1,104 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 11584,
+    "diffFiles": {
+      "included": [
+        "lib/pack.js",
+        "lib/schema.js",
+        "test/pack.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "lib/pack.js"
+      ],
+      "omitted": [
+        "lib/schema.js",
+        "test/pack.js"
+      ]
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 13129,
+      "outputTokens": 162,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 24131.1882,
+    "attempts": 2,
+    "cached": false,
+    "requestId": "y7HlatOXNqzu694P-YiB6QE"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "test/pack.js",
+      "line": 2161,
+      "category": "testing",
+      "severity": "medium",
+      "claim": "The test check expects an error message 'Invalid manifest options', but Schema.assert throws an error starting with 'Invalid manifest options (...)' or 'Invalid manifest'.",
+      "evidence": "}.to.throw('Invalid manifest options');",
+      "suggested_fix": "expect(function() {\n    Hapi.Pack.compose(manifest, function () {});\n}).to.throw(/^Invalid manifest/);",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "invalid",
+      "rejectReason": "evidence_not_found",
+      "duplicateOf": null,
+      "rank": null,
+      "features": null,
+      "filterScore": null,
+      "body": "**Testing (medium)**: The test check expects an error message 'Invalid manifest options', but Schema.assert throws an error starting with 'Invalid manifest options (...)' or 'Invalid manifest'.\n\n> `}.to.throw('Invalid manifest options');`\n\n**Suggested fix:** expect(function() {\n    Hapi.Pack.compose(manifest, function () {});\n}).to.throw(/^Invalid manifest/);"
+    }
+  ],
+  "selected": [],
+  "startedAt": "2026-10-31T09:15:44.911Z",
+  "finishedAt": "2026-10-31T09:16:09.246Z"
+}
