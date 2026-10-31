@@ -2,6 +2,7 @@ import { FakeProvider, LLMClient, LLMError, MemoryCache } from '@reviewlens/llm'
 import { describe, expect, it } from 'vitest';
 import { PRESETS, type StrategyConfig } from './config.js';
 import { comment, sampleInput } from './fixtures.js';
+import { FEEDBACK_HINT } from './format.js';
 import { memorySnapshot } from './input.js';
 import { runReview } from './pipeline.js';
 
@@ -48,6 +49,8 @@ describe('runReview', () => {
     expect(run.candidates[2]!.duplicateOf).toBe(1);
     expect(run.selected.map((c) => c.index)).toEqual([1]);
     expect(run.selected[0]!.body).toContain('**Bug (high)**');
+    // Every posted comment ends by asking for a reaction, the feedback the filter learns from.
+    expect(run.selected[0]!.body.endsWith(FEEDBACK_HINT)).toBe(true);
   });
 
   it('records config, prompt version, context stats and LLM usage', async () => {

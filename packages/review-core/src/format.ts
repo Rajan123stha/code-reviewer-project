@@ -11,6 +11,12 @@ const CATEGORY_LABEL: Record<ModelComment['category'], string> = {
   testing: 'Testing',
 };
 
+/**
+ * Asks for the one signal GitHub cannot infer: whether the comment helped. Reactions are
+ * read when the pull request closes and become the comment's feedback label.
+ */
+export const FEEDBACK_HINT = '<sub>Was this useful? React with 👍 or 👎 to tell Reviewlens.</sub>';
+
 /** Markdown body of one inline review comment. */
 export function formatCommentBody(comment: ModelComment): string {
   const parts = [
@@ -22,6 +28,7 @@ export function formatCommentBody(comment: ModelComment): string {
   }
   if (comment.suggested_fix?.trim())
     parts.push(`**Suggested fix:** ${comment.suggested_fix.trim()}`);
+  parts.push(FEEDBACK_HINT);
   return parts.join('\n\n');
 }
 
