@@ -245,6 +245,12 @@ to `eval/results/<experiment>/<spec hash>/`, and `eval/notebooks/ablation.ipynb`
 [eval/harness/README.md](eval/harness/README.md) has the matching rules and metric definitions;
 [ADR 0008](docs/adr/0008-eval-harness.md) records the design.
 
+## Verifier
+
+An optional second model pass tries to refute each comment before it is posted; comments it
+does not uphold get status `refuted`. Set `verifierPasses` (0 = off) in the strategy config;
+experiment E4 measures its effect. [ADR 0012](docs/adr/0012-verifier.md) has the design.
+
 ## Learned filter
 
 Each candidate comment gets a usefulness score from a model trained on earlier reviews; comments
