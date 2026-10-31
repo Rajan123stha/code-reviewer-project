@@ -4,8 +4,8 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 8 in progress (feedback, repository settings, limits and dashboard done;
-> deployment not started).** Six context strategies review pull requests, Benchmark A
+> **Status: Phase 8 built (feedback, repository settings, limits, dashboard, verifier, deployment
+> files); not yet deployed to a public host.** Six context strategies review pull requests, Benchmark A
 > (1,022 bug-introducing changes) is built, the harness runs and scores ablations over it, and
 > the usefulness filter (features, training, scoring service) is implemented. No ablation has
 > been run at full size and no filter has been trained on real data yet. See
@@ -287,6 +287,11 @@ For development, run `pnpm dev:dashboard` (API on port 4000) and
 It listens on 127.0.0.1 only, unless `DASHBOARD_PASSWORD` is set: review data contains code
 from the reviewed repositories. The demo shows a banner on every page so its synthetic data
 is never mistaken for real results. [ADR 0011](docs/adr/0011-dashboard.md) has the design.
+
+## Deployment
+
+Docker images for the api, worker, dashboard and filter service, a compose file, and a
+step-by-step guide with TLS and the GitHub App: [docs/deploy.md](docs/deploy.md).
 
 ## Development
 
