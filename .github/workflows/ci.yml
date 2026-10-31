@@ -48,6 +48,26 @@ jobs:
       - run: mypy
       - run: pytest -q
 
+  # The deployable images build from a clean checkout. Not pushed anywhere.
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        app: [api, worker, dashboard]
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -f infra/docker/node.Dockerfile --build-arg APP=${{ matrix.app }} -t reviewlens-${{ matrix.app }} .
+      - name: The image contains its build output
+        run: docker run --rm --entrypoint sh reviewlens-${{ matrix.app }} -c 'test -d dist && ls dist'
+
+  filter-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -f infra/docker/filter.Dockerfile -t reviewlens-filter .
+
   eval:
     runs-on: ubuntu-latest
     timeout-minutes: 15

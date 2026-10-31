@@ -1,6 +1,8 @@
 # Local stack. From the repo root:
 #   docker compose -f infra/docker-compose.yml up -d                     # Postgres + Redis only
-#   docker compose -f infra/docker-compose.yml --profile app up -d       # + api and worker containers
+#   docker compose -f infra/docker-compose.yml --profile app up -d       # + api, worker, dashboard
+#   docker compose -f infra/docker-compose.yml --profile filter up -d    # + learned-filter service
+# Apply migrations first: DATABASE_URL=postgresql://reviewlens:reviewlens@localhost:5432/reviewlens pnpm db:migrate
 #   docker compose -f infra/docker-compose.yml --profile tracing up -d   # + Jaeger (UI on :16686)
 name: reviewlens
 
@@ -57,10 +59,40 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://reviewlens:reviewlens@postgres:5432/reviewlens
       GITHUB_APP_PRIVATE_KEY_PATH: /run/secrets/github_app_key
+      # Used only when REVIEW_FILTER_THRESHOLD is set (start the filter profile too).
+      FILTER_URL: http://filter:8000
     secrets: [github_app_key]
     depends_on:
       redis: { condition: service_healthy }
       postgres: { condition: service_healthy }
+
+  dashboard:
+    profiles: [app]
+    build:
+      context: ..
+      dockerfile: infra/docker/node.Dockerfile
+      args: { APP: dashboard }
+    command: ['node', 'dist/server/main.js']
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql://reviewlens:reviewlens@postgres:5432/reviewlens
+      # Inside a container the dashboard must listen beyond loopback, so it needs a password.
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?set DASHBOARD_PASSWORD in .env}
+      RESULTS_DIR: /results
+    volumes:
+      - ../eval/results:/results:ro
+    # Published on loopback only; put a TLS reverse proxy in front to expose it.
+    ports: ['127.0.0.1:4000:4000']
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  filter:
+    profiles: [filter]
+    build:
+      context: ..
+      dockerfile: infra/docker/filter.Dockerfile
+    ports: ['127.0.0.1:8000:8000']
 
   jaeger:
     profiles: [tracing]
