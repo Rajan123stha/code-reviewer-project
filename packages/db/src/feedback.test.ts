@@ -59,7 +59,14 @@ function run(costUsd: number): ReviewRun {
     },
     redactions: {},
     featuresVersion: 'features/v1',
-    policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
+    policy: {
+      enabled: true,
+      reviewDrafts: false,
+      maxComments: null,
+      minSeverity: 'low',
+      categories: null,
+      ignore: [],
+    },
     verifier: null,
     filter: null,
     llm: {

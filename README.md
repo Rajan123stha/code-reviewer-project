@@ -74,6 +74,7 @@ A repository can tune its reviews with a file at its root. Every key is optional
 
 ```yaml
 enabled: true # false switches reviews off
+review_drafts: false # true reviews draft pull requests too
 max_comments: 5 # at most this many comments per review
 min_severity: medium # low | medium | high | critical
 categories: [bug, security, error-handling] # post only these
@@ -82,6 +83,7 @@ ignore: # paths left out of the review
   - '*.generated.ts'
 ```
 
+Draft pull requests are reviewed when marked ready for review, unless `review_drafts` is true.
 The file is read from the pull request's base branch, so a pull request cannot change the
 rules it is reviewed under. A file with a mistake in it is ignored as a whole.
 

@@ -141,7 +141,14 @@ function demoRun(rand: () => number, strategy: 'S1' | 'S4'): ReviewRun {
     },
     redactions: rand() < 0.15 ? { github_token: 1 } : {},
     featuresVersion: 'features/v1',
-    policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
+    policy: {
+      enabled: true,
+      reviewDrafts: false,
+      maxComments: null,
+      minSeverity: 'low',
+      categories: null,
+      ignore: [],
+    },
     verifier: null,
     filter: null,
     llm: {

@@ -78,6 +78,15 @@ describe('POST /webhooks/github', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('reviews a draft once it is marked ready, under its own job id', async () => {
+    const res = await send('pull_request', pullRequestPayload('ready_for_review'));
+    expect(res.statusCode).toBe(202);
+    expect(enqueueReview).toHaveBeenCalledWith(
+      expect.objectContaining({ trigger: 'ready_for_review', headSha: HEAD }),
+    );
+    expect(enqueueFeedback).not.toHaveBeenCalled();
+  });
+
   it('also queues a feedback check when a pull request gets a new push', async () => {
     await send('pull_request', pullRequestPayload('synchronize'));
     expect(enqueueFeedback).toHaveBeenCalledExactlyOnceWith({

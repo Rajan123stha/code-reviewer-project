@@ -16,6 +16,8 @@ const MAX_POLICY_BYTES = 20_000;
 export interface RepoPolicy {
   /** False turns reviews off for the repository. */
   enabled: boolean;
+  /** Review draft pull requests too. Default false: drafts are reviewed when marked ready. */
+  reviewDrafts: boolean;
   /** Cap on comments per review, on top of the strategy's own cap. Null: no extra cap. */
   maxComments: number | null;
   /** Comments less severe than this are not posted. */
@@ -28,6 +30,7 @@ export interface RepoPolicy {
 
 export const DEFAULT_POLICY: RepoPolicy = {
   enabled: true,
+  reviewDrafts: false,
   maxComments: null,
   minSeverity: 'low',
   categories: null,
@@ -36,6 +39,7 @@ export const DEFAULT_POLICY: RepoPolicy = {
 
 const policyFileSchema = z.strictObject({
   enabled: z.boolean().optional(),
+  review_drafts: z.boolean().optional(),
   max_comments: z.number().int().min(1).max(50).optional(),
   min_severity: z.enum(SEVERITIES).optional(),
   categories: z.array(z.enum(CATEGORIES)).min(1).optional(),
@@ -77,6 +81,7 @@ export function parsePolicy(text: string | null): ParsedPolicy {
   return {
     policy: {
       enabled: file.enabled ?? DEFAULT_POLICY.enabled,
+      reviewDrafts: file.review_drafts ?? DEFAULT_POLICY.reviewDrafts,
       maxComments: file.max_comments ?? null,
       minSeverity: file.min_severity ?? DEFAULT_POLICY.minSeverity,
       categories: file.categories ?? null,
