@@ -5,6 +5,7 @@ rlharness score <experiment.yaml>     compute metrics; write summary.json, repor
 rlharness comments <experiment.yaml>  sample posted comments for precision labeling
 rlharness label <experiment.yaml>     label sampled comments (valid / nitpick / invalid)
 rlharness judge <experiment.yaml>     run the LLM judge over the sampled comments
+rlharness paper                       regenerate docs/paper.md from the result files
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from rlbench import manifest as manifest_io
 from rlbench import validation
 
 from . import comments as comments_mod
-from . import filtercheck, report, spec
+from . import filtercheck, paper, report, spec
 from .metrics import load_arm
 from .runner import DEFAULT_CLI, REPO_ROOT, CliReviewer, repo_dir, run_experiment
 
@@ -186,6 +187,12 @@ def cmd_judge(args: argparse.Namespace) -> int:
     return subprocess.run(cmd, cwd=REPO_ROOT).returncode
 
 
+def cmd_paper(args: argparse.Namespace) -> int:
+    out = paper.write(args.out)
+    print(f"wrote {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rlharness", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -227,6 +234,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model")
     p.add_argument("--fake-llm", action="store_true")
     p.set_defaults(func=cmd_judge)
+
+    p = sub.add_parser("paper", help="regenerate docs/paper.md from the result files")
+    p.add_argument("--out", type=Path, default=paper.OUTPUT)
+    p.set_defaults(func=cmd_paper)
 
     args = parser.parse_args(argv)
     result: int = args.func(args)

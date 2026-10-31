@@ -13,7 +13,7 @@ WORKERS ?= 1
 
 export PYTHONPATH := eval/harness/src:eval/benchmark/src:services/filter/src
 
-.PHONY: build eval-smoke eval eval-score eval-test filter-smoke filter-train filter-serve
+.PHONY: build eval-smoke eval eval-score eval-test paper filter-smoke filter-train filter-serve
 
 build:
 	pnpm install --frozen-lockfile
@@ -50,3 +50,7 @@ filter-train:
 
 filter-serve:
 	$(PYTHON) -m rlfilter.cli serve
+
+# The technical report: every number is read from result files (docs/paper/template.md).
+paper:
+	$(PYTHON) -m rlharness.cli paper
