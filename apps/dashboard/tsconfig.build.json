@@ -7,5 +7,10 @@
     "customConditions": []
   },
   "include": ["src/server"],
-  "exclude": ["src/server/**/*.test.ts", "src/server/demo.ts", "src/server/demo-data.ts"]
+  "exclude": [
+    "src/server/**/*.test.ts",
+    "src/server/demo.ts",
+    "src/server/demo-data.ts",
+    "src/server/label.ts"
+  ]
 }

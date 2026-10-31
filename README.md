@@ -288,6 +288,15 @@ It listens on 127.0.0.1 only, unless `DASHBOARD_PASSWORD` is set: review data co
 from the reviewed repositories. The demo shows a banner on every page so its synthetic data
 is never mistaken for real results. [ADR 0011](docs/adr/0011-dashboard.md) has the design.
 
+## Labeling
+
+`pnpm label` opens the dashboard's labeling pages on http://127.0.0.1:4000/#/labels, with no
+database needed: the 100 sampled benchmark cases (valid / invalid / unsure, showing the fix and
+the marked lines) and sampled review comments (valid / nitpick / invalid, shown blind). Keys 1,
+2 and 3 record a verdict and move to the next unlabeled item. Labels are appended to the same
+files the terminal tools write (`eval/benchmark/validation/verdicts.jsonl`,
+`eval/results/<experiment>/<hash>/comments/human.jsonl`); commit them with the results.
+
 ## Technical report
 
 [docs/paper.md](docs/paper.md) is generated from [docs/paper/template.md](docs/paper/template.md) by

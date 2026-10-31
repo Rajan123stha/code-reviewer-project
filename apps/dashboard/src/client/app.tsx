@@ -3,6 +3,7 @@ import { Icon } from './components.js';
 import { applyTheme, href, storedTheme, useApi, useRoute, type Theme } from './lib.js';
 import { ExperimentDetailPage, ExperimentsPage } from './pages/experiments.js';
 import { FeedbackPage } from './pages/feedback.js';
+import { CaseLabelPage, CommentLabelPage, LabelsPage } from './pages/labels.js';
 import { OverviewPage } from './pages/overview.js';
 import { RepositoriesPage } from './pages/repositories.js';
 import { ReviewDetailPage } from './pages/review-detail.js';
@@ -22,6 +23,7 @@ const TITLES: Record<string, string> = {
   repositories: 'Repositories',
   feedback: 'Feedback',
   experiments: 'Experiments',
+  labels: 'Labeling',
 };
 
 function Page({ parts }: { parts: string[] }) {
@@ -33,6 +35,10 @@ function Page({ parts }: { parts: string[] }) {
   if (section === 'experiments' && id && extra)
     return <ExperimentDetailPage name={id} hash={extra} />;
   if (section === 'experiments') return <ExperimentsPage />;
+  if (section === 'labels' && id === 'benchmark' && extra) return <CaseLabelPage id={extra} />;
+  if (section === 'labels' && id === 'comments' && extra && parts[3])
+    return <CommentLabelPage name={extra} hash={parts[3]} id={parts[4]} />;
+  if (section === 'labels') return <LabelsPage />;
   if (section === '') return <OverviewPage />;
   return (
     <div className="card empty">
@@ -60,7 +66,11 @@ function ThemeSwitch() {
 
 export function App() {
   const { parts } = useRoute();
-  const meta = useApi<{ demo: boolean }>('/api/meta');
+  const meta = useApi<{ demo: boolean; labeling: boolean; database: boolean }>('/api/meta');
+  // Labeling mode has no database: show only the pages that work without one.
+  const nav = NAV.filter((item) =>
+    meta.data?.database === false ? item.path === 'experiments' : true,
+  );
   const section = parts[0] ?? '';
 
   useEffect(() => {
@@ -88,7 +98,7 @@ export function App() {
           </span>
           Reviewlens
         </a>
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <a
             key={item.path}
             className="nav-link"
@@ -99,6 +109,16 @@ export function App() {
             {item.label}
           </a>
         ))}
+        {meta.data?.labeling && (
+          <a
+            className="nav-link"
+            href={href('labels')}
+            aria-current={section === 'labels' ? 'page' : undefined}
+          >
+            <Icon name="label" />
+            Labeling
+          </a>
+        )}
         <div className="sidebar-foot">
           <ThemeSwitch />
         </div>

@@ -12,7 +12,8 @@
     "dev:server": "tsx watch --env-file-if-exists=../../.env --conditions=source src/server/main.ts",
     "dev:client": "vite",
     "demo": "vite build && tsx --conditions=source src/server/demo.ts",
-    "start": "node --env-file-if-exists=../../.env dist/server/main.js"
+    "start": "node --env-file-if-exists=../../.env dist/server/main.js",
+    "label": "vite build && tsx --conditions=source src/server/label.ts"
   },
   "dependencies": {
     "@reviewlens/db": "workspace:*",

@@ -732,3 +732,78 @@ details[open] > summary {
     background: CanvasText;
   }
 }
+
+/* Labeling */
+.diff {
+  padding: 8px 0;
+  white-space: pre;
+  overflow-x: auto;
+}
+.diff-line {
+  display: block;
+  padding: 0 12px;
+  min-height: 1.5em;
+}
+.diff-line.add {
+  background: color-mix(in srgb, var(--good) 13%, transparent);
+}
+.diff-line.del {
+  background: color-mix(in srgb, var(--critical) 12%, transparent);
+}
+.diff-line.hunk,
+.diff-line.meta {
+  color: var(--ink-muted);
+}
+.diff-line.target {
+  background: color-mix(in srgb, var(--warning) 28%, transparent);
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+.guide {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+.guide > div {
+  display: contents;
+}
+.guide dt {
+  font-weight: 600;
+}
+.guide dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+.verdicts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.button.verdict {
+  font-weight: 500;
+}
+.button.verdict.chosen {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  color: var(--ink-muted);
+}
+.label-footer {
+  position: sticky;
+  bottom: 12px;
+  padding: 12px 16px;
+  z-index: 3;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+}
+.input.small {
+  min-width: 0;
+  width: 160px;
+  min-height: 30px;
+  padding: 4px 8px;
+}

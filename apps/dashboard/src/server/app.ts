@@ -3,12 +3,14 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import type { DashboardStore } from '@reviewlens/db';
 import { createLogger, type Logger } from '@reviewlens/shared';
-import Fastify from 'fastify';
+import Fastify, { type FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { ExperimentSource } from './experiments.js';
+import { labelRoutes, type LabelPaths } from './labels.js';
 
 export interface DashboardDeps {
-  store: DashboardStore;
+  /** Review data. Null in labeling mode, which needs no database; its pages then say so. */
+  store: DashboardStore | null;
   experiments: ExperimentSource;
   /** Built client (`vite build` output). Without it only the API is served. */
   clientDir?: string | undefined;
@@ -16,6 +18,8 @@ export interface DashboardDeps {
   password?: string | undefined;
   /** Shown as a banner in the client, so synthetic data is never mistaken for real. */
   demo?: boolean;
+  /** Enables the labeling pages, which append to label files in the repository. */
+  labels?: LabelPaths | undefined;
   logger?: Logger;
 }
 
@@ -66,25 +70,28 @@ export function buildDashboard(deps: DashboardDeps) {
   });
 
   app.get('/healthz', () => ({ status: 'ok' }));
-  app.get('/api/meta', () => ({ demo: deps.demo ?? false }));
-  app.get('/api/overview', () => deps.store.overview());
-  app.get('/api/repositories', () => deps.store.repositories());
+  app.get('/api/meta', () => ({
+    demo: deps.demo ?? false,
+    labeling: deps.labels !== undefined,
+    database: deps.store !== null,
+  }));
+  if (deps.labels) void app.register(labelRoutes, deps.labels);
 
-  app.get('/api/reviews', async (req, reply) => {
-    const parsed = reviewQuerySchema.safeParse(req.query);
-    if (!parsed.success) return reply.code(400).send({ error: 'invalid query' });
-    const { repo, status, q, limit, offset } = parsed.data;
-    return deps.store.reviews({ repositoryId: repo, status, search: q, limit, offset });
-  });
+  if (deps.store) void app.register(storeRoutes, { store: deps.store });
+  else {
+    for (const path of [
+      '/api/overview',
+      '/api/repositories',
+      '/api/reviews',
+      '/api/reviews/:id',
+      '/api/feedback',
+    ]) {
+      app.get(path, (_req, reply) =>
+        reply.code(503).send({ error: 'no database: this dashboard runs in labeling mode only' }),
+      );
+    }
+  }
 
-  app.get<{ Params: { id: string } }>('/api/reviews/:id', async (req, reply) => {
-    const id = Number(req.params.id);
-    if (!Number.isSafeInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
-    const review = await deps.store.review(id);
-    return review ?? reply.code(404).send({ error: 'review not found' });
-  });
-
-  app.get('/api/feedback', () => deps.store.feedback());
   app.get('/api/experiments', () => deps.experiments.list());
   app.get<{ Params: { name: string; hash: string } }>(
     '/api/experiments/:name/:hash',
@@ -119,3 +126,24 @@ export function buildDashboard(deps: DashboardDeps) {
 
   return app;
 }
+
+const storeRoutes: FastifyPluginAsync<{ store: DashboardStore }> = async (app, { store }) => {
+  app.get('/api/overview', () => store.overview());
+  app.get('/api/repositories', () => store.repositories());
+
+  app.get('/api/reviews', async (req, reply) => {
+    const parsed = reviewQuerySchema.safeParse(req.query);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid query' });
+    const { repo, status, q, limit, offset } = parsed.data;
+    return store.reviews({ repositoryId: repo, status, search: q, limit, offset });
+  });
+
+  app.get<{ Params: { id: string } }>('/api/reviews/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
+    const review = await store.review(id);
+    return review ?? reply.code(404).send({ error: 'review not found' });
+  });
+
+  app.get('/api/feedback', () => store.feedback());
+};

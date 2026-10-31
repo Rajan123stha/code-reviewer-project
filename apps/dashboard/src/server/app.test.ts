@@ -46,7 +46,11 @@ describe('dashboard API', { timeout: 20_000 }, () => {
   it('serves the store through JSON endpoints', async () => {
     const store = fakeStore();
     const app = buildDashboard({ store, experiments: noExperiments, demo: true });
-    expect((await app.inject('/api/meta')).json()).toEqual({ demo: true });
+    expect((await app.inject('/api/meta')).json()).toEqual({
+      demo: true,
+      labeling: false,
+      database: true,
+    });
     expect((await app.inject('/api/overview')).json()).toEqual({ repositories: 1 });
     expect((await app.inject('/api/reviews/7')).json()).toEqual({ id: 7 });
     expect((await app.inject('/api/reviews/8')).statusCode).toBe(404);
