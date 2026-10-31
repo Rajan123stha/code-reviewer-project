@@ -15,17 +15,19 @@ import { loadPrompt, renderTemplate } from './prompts.js';
 import { REVIEW_SCHEMA_NAME, reviewOutputSchema, type ModelComment } from './schema.js';
 import { scrubSecrets } from './scrub.js';
 import { DiffIndex, normalizePath, type RejectReason } from './validate.js';
+import { verifyComments, type VerifyCall, type VerifyVerdict } from './verify.js';
 
 /**
  * - selected: valid, kept after dedupe, within maxComments; this is what gets posted.
  * - over_cap: valid and unique, but ranked below the maxComments cut.
  * - filtered: valid and unique, but scored below the usefulness filter's threshold.
  * - suppressed: valid, but of a severity or category the repository's policy excludes.
+ * - refuted: valid and unique, but the verifier pass did not uphold it.
  * - duplicate: valid, but a near-duplicate of a higher-priority comment.
  * - invalid: failed validation (see rejectReason).
  */
 export type CandidateStatus =
-  'selected' | 'over_cap' | 'filtered' | 'suppressed' | 'duplicate' | 'invalid';
+  'selected' | 'over_cap' | 'filtered' | 'refuted' | 'suppressed' | 'duplicate' | 'invalid';
 
 export interface Candidate extends ModelComment {
   /** Position in the model's output, stable across processing. */
@@ -36,6 +38,10 @@ export interface Candidate extends ModelComment {
   duplicateOf: number | null;
   /** 1-based rank among valid, unique candidates that passed the filter; null otherwise. */
   rank: number | null;
+  /** Mean verifier verdict score (upheld 1, uncertain 0.5, refuted 0); null if not verified. */
+  verifierAgreement: number | null;
+  /** The verifier's verdict and reason in each pass; empty if not verified. */
+  verifierVerdicts: { verdict: VerifyVerdict; reason: string }[];
   /** Filter inputs. Null for invalid candidates, which are never scored or posted. */
   features: CandidateFeatures | null;
   /** Usefulness score from the learned filter; null when the filter is off or did not score it. */
@@ -70,6 +76,16 @@ export interface ReviewRun {
   featuresVersion: string;
   /** The repository policy the review ran under. */
   policy: RepoPolicy;
+  /** The verifier pass; null when it is off or there was nothing to verify. */
+  verifier: {
+    promptVersion: string;
+    promptHash: string;
+    passes: number;
+    threshold: number;
+    verified: number;
+    refuted: number;
+    calls: VerifyCall[];
+  } | null;
   /** The filter that scored this review; null when the filter is off or had nothing to score. */
   filter: { modelVersion: string; threshold: number; scored: number; dropped: number } | null;
   candidates: Candidate[];
@@ -167,6 +183,7 @@ export async function runReview(
     return {
       ...base,
       llm: null,
+      verifier: null,
       filter: null,
       candidates: [],
       selected: [],
@@ -176,10 +193,13 @@ export async function runReview(
   }
 
   // 3. Generate candidates.
+  const title = scrub(input.pr.title);
+  const description = scrub(input.pr.body?.trim() || '(no description)');
+  const contextText = context.sections.map((s) => s.text).join('\n\n');
   const user = renderTemplate(prompt.user, {
-    title: scrub(input.pr.title),
-    description: scrub(input.pr.body?.trim() || '(no description)'),
-    context: context.sections.map((s) => s.text).join('\n\n'),
+    title,
+    description,
+    context: contextText,
     notes: omittedNote(context.stats),
   });
   const result = await deps.llm.generate({
@@ -213,6 +233,8 @@ export async function runReview(
     rejectReason: reasons[i] ?? null,
     duplicateOf: null,
     rank: null,
+    verifierAgreement: null,
+    verifierVerdicts: [],
     features: null,
     filterScore: null,
     body: formatCommentBody(c),
@@ -228,7 +250,44 @@ export async function runReview(
     }
   });
 
-  // 5. Features for every valid candidate (duplicates too: they are training data), then
+  // 5. Verifier: a second look that tries to refute each unique comment. It sees the same
+  // context the reviewer saw, so it can only remove comments, never add knowledge.
+  let verifier: ReviewRun['verifier'] = null;
+  let survivors = unique;
+  if (config.verifierPasses > 0 && unique.length > 0) {
+    const verified = await verifyComments(deps.llm, {
+      title,
+      description,
+      context: contextText,
+      comments: unique.map((i) => comments[i]!),
+      model: config.model,
+      fallbackModels: config.fallbackModels,
+      effort: config.effort,
+      promptVersion: config.verifierPromptVersion,
+      passes: config.verifierPasses,
+      maxOutputTokens: config.maxOutputTokens,
+      cacheSalt: deps.cacheSalt,
+    });
+    unique.forEach((i, k) => {
+      candidates[i]!.verifierAgreement = verified.agreement[k]!;
+      candidates[i]!.verifierVerdicts = verified.verdicts[k]!;
+    });
+    survivors = unique.filter((_, k) => verified.agreement[k]! >= config.verifierThreshold);
+    for (const i of unique) {
+      if (!survivors.includes(i)) candidates[i]!.status = 'refuted';
+    }
+    verifier = {
+      promptVersion: verified.promptVersion,
+      promptHash: verified.promptHash,
+      passes: config.verifierPasses,
+      threshold: config.verifierThreshold,
+      verified: unique.length,
+      refuted: unique.length - survivors.length,
+      calls: verified.calls,
+    };
+  }
+
+  // 6. Features for every valid candidate (duplicates too: they are training data), then
   // the learned filter over the unique ones.
   const clusterSize = new Map<number, number>();
   validIdx.forEach((i, k) => {
@@ -242,30 +301,31 @@ export async function runReview(
     candidates[i]!.features = extractor.extract(comments[i]!, {
       duplicateClusterSize: clusterSize.get(kept) ?? 1,
       candidatesInReview: unique.length,
+      verifierAgreement: candidates[kept]!.verifierAgreement,
     });
   }
 
   let filter: ReviewRun['filter'] = null;
-  let ranked = unique;
-  if (config.filterThreshold !== null && deps.scorer && unique.length > 0) {
+  let ranked = survivors;
+  if (config.filterThreshold !== null && deps.scorer && survivors.length > 0) {
     const threshold = config.filterThreshold;
-    const scored = await deps.scorer.score(unique.map((i) => candidates[i]!.features!));
-    assertScoreResult(scored, { count: unique.length, model: config.filterModel });
-    unique.forEach((i, k) => (candidates[i]!.filterScore = scored.scores[k]!));
+    const scored = await deps.scorer.score(survivors.map((i) => candidates[i]!.features!));
+    assertScoreResult(scored, { count: survivors.length, model: config.filterModel });
+    survivors.forEach((i, k) => (candidates[i]!.filterScore = scored.scores[k]!));
     const score = (i: number) => candidates[i]!.filterScore!;
     // `unique` is already in severity/confidence order, and the sort is stable, so equal
     // scores keep that order.
-    ranked = unique.filter((i) => score(i) >= threshold).sort((i, j) => score(j) - score(i));
-    for (const i of unique) if (score(i) < threshold) candidates[i]!.status = 'filtered';
+    ranked = survivors.filter((i) => score(i) >= threshold).sort((i, j) => score(j) - score(i));
+    for (const i of survivors) if (score(i) < threshold) candidates[i]!.status = 'filtered';
     filter = {
       modelVersion: scored.modelVersion,
       threshold,
-      scored: unique.length,
-      dropped: unique.length - ranked.length,
+      scored: survivors.length,
+      dropped: survivors.length - ranked.length,
     };
   }
 
-  // 6. Rank and cap.
+  // 7. Rank and cap.
   ranked.forEach((i, r) => {
     candidates[i]!.rank = r + 1;
     candidates[i]!.status = r < maxComments ? 'selected' : 'over_cap';
@@ -285,6 +345,7 @@ export async function runReview(
       cached: result.cached,
       requestId: result.requestId ?? null,
     },
+    verifier,
     filter,
     candidates,
     selected: ranked.slice(0, maxComments).map((i) => candidates[i]!),

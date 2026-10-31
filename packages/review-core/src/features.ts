@@ -122,7 +122,11 @@ export class FeatureExtractor {
    */
   extract(
     comment: ModelComment,
-    review: { duplicateClusterSize: number; candidatesInReview: number },
+    review: {
+      duplicateClusterSize: number;
+      candidatesInReview: number;
+      verifierAgreement?: number | null;
+    },
   ): CandidateFeatures {
     const path = normalizePath(comment.file);
     const file = this.files.get(path);
@@ -145,7 +149,7 @@ export class FeatureExtractor {
       strategy: this.strategy,
       duplicateClusterSize: review.duplicateClusterSize,
       candidatesInReview: review.candidatesInReview,
-      verifierAgreement: null,
+      verifierAgreement: review.verifierAgreement ?? null,
       repoCategoryAcceptRate: null,
     };
   }
