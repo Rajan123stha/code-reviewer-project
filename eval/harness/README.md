@@ -26,7 +26,7 @@ One YAML file per ablation in `experiments/`, matching the plan in `docs/spec.md
 | `E1-strategies.yaml`   | Context strategy S0 to S5                       | runnable                                       |
 | `E2-token-budget.yaml` | Context budget 4k / 8k / 16k / 32k on S4        | runnable                                       |
 | `E3-graph-depth.yaml`  | Call-graph depth 0 to 3 on S4                   | runnable                                       |
-| `E4-verifier.yaml`     | Verifier pass on / off                          | waits for the verifier                         |
+| `E4-verifier.yaml`     | Verifier off / 1 pass / 3 passes on S4          | runnable                                       |
 | `E5-filter.yaml`       | Learned filter thresholds                       | needs a trained filter served at `FILTER_URL`  |
 | `F1-filter-data.yaml`  | S1 and S4 on the filter's training repositories | runnable; training data, not an ablation       |
 | `E6-models.yaml`       | Two LLMs on S4                                  | runnable; second arm needs `ANTHROPIC_API_KEY` |
@@ -51,8 +51,9 @@ cannot mix two models.
 - **Resumable.** Each review is one JSON file under
   `eval/results/<name>/<spec hash>/runs/<arm>/run<N>/`. Re-running skips finished reviews and
   retries failed ones.
-- **Quota-aware.** When the model is rate-limited or unavailable the CLI exits with code 3; the
-  harness stops and tells you to run the same command again later.
+- **Quota-aware.** When the model is rate-limited the CLI exits with code 3. A limit that clears
+  within 5 minutes (a per-minute limit) is waited out and the review retried; a longer one (a
+  daily quota) stops the run, and the same command resumes it later.
 - **Ordered for pairing.** Work goes run by run, input by input, arm by arm, so whatever is
   finished is finished in every arm.
 - **Cached.** LLM responses, parsed files and embeddings are cached under

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -110,6 +112,15 @@ class CliReviewer:
         raise ReviewFailed(detail or f"exit code {proc.returncode}")
 
 
+# "next available in 47 s": a per-minute limit, worth waiting for; a daily quota says hours.
+_RETRY_AFTER = re.compile(r"next available in (\d+) s")
+
+
+def retry_after_seconds(error: QuotaExhausted) -> int | None:
+    match = _RETRY_AFTER.search(str(error))
+    return int(match.group(1)) if match else None
+
+
 def result_path(results: Path, arm: Arm, run_index: int, item: ReviewInput) -> Path:
     return results / "runs" / arm.id / f"run{run_index}" / f"{item.file_key}.json"
 
@@ -137,6 +148,8 @@ def run_experiment(
     retry_failed: bool = True,
     limit: int | None = None,
     log: Callable[[str], None] = print,
+    max_quota_wait_s: float = 300,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> RunSummary:
     """Run every (arm, run, input) that has no result yet.
 
@@ -147,6 +160,9 @@ def run_experiment(
     Work is ordered run by run, input by input, arm by arm: if the experiment stops early,
     the inputs done so far are complete across all arms, which is what paired comparisons
     need.
+
+    A rate limit that clears within `max_quota_wait_s` (a per-minute limit) is waited out
+    and the review retried; a longer one (a daily quota) stops the run.
     """
     summary = RunSummary()
     jobs: list[tuple[Arm, int, ReviewInput, Path]] = []
@@ -169,7 +185,16 @@ def run_experiment(
         arm, run_index, item, out = job
         out.parent.mkdir(parents=True, exist_ok=True)
         tmp = out.with_suffix(".tmp")
-        reviewer.review(item, arm, run_index, tmp)
+        for attempt in range(1, 7):
+            try:
+                reviewer.review(item, arm, run_index, tmp)
+                break
+            except QuotaExhausted as error:
+                wait = retry_after_seconds(error)
+                if wait is None or wait > max_quota_wait_s or attempt == 6:
+                    raise
+                log(f"wait   {arm.id} run{run_index} {item.repo}: rate-limited for {wait} s")
+                sleep(wait + 5)
         json.loads(tmp.read_text(encoding="utf-8"))  # refuse to keep a truncated result
         out.with_suffix(".error.json").unlink(missing_ok=True)
         tmp.replace(out)

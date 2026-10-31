@@ -200,8 +200,8 @@ def test_spec_rejects_bad_definitions(tmp_path: Path) -> None:
         write_spec(tmp_path, "arms:\n  - {id: A, strategy: S0}\n  - {id: A, strategy: S1}\n")
     with pytest.raises(spec.SpecError, match="baseline"):
         write_spec(tmp_path, "baseline: Z\narms:\n  - {id: A, strategy: S0}\n")
-    pending = write_spec(tmp_path, "requires: [verifier]\narms:\n  - {id: A, strategy: S0}\n")
-    assert pending.unavailable() == ["verifier"]
+    pending = write_spec(tmp_path, "requires: [time-travel]\narms:\n  - {id: A, strategy: S0}\n")
+    assert pending.unavailable() == ["time-travel"]
 
 
 def test_select_cases_samples_inputs_round_robin_and_keeps_all_their_cases(tmp_path: Path) -> None:
@@ -277,6 +277,43 @@ def test_runner_stops_on_quota_and_orders_work_by_input(tmp_path: Path) -> None:
     ]
     assert summary.completed == 2 and summary.failed == 0
     assert len(reviewer.calls) == 3
+
+
+def test_runner_waits_out_short_rate_limits_but_stops_on_daily_quota(tmp_path: Path) -> None:
+    experiment = write_spec(tmp_path, TWO_ARMS)
+    inputs, _ = spec.select_cases([case("c1")], experiment)
+    first = f"A/run1/{inputs[0].key}"
+    waits: list[float] = []
+
+    class FlakyReviewer(ScriptedReviewer):
+        failures = 2
+
+        def review(self, item: Any, arm: Any, run_index: int, out: Path) -> None:
+            if f"{arm.id}/run{run_index}/{item.key}" == first and self.failures > 0:
+                self.failures -= 1
+                raise QuotaExhausted(
+                    "all 1 Gemini API keys are rate-limited; next available in 40 s"
+                )
+            super().review(item, arm, run_index, out)
+
+    summary = run_experiment(
+        experiment,
+        inputs,
+        tmp_path / "r",
+        FlakyReviewer({}),
+        log=lambda _l: None,
+        sleep=waits.append,
+    )
+    assert waits == [45, 45]
+    assert summary.completed == 4 and not summary.stopped_for_quota
+
+    daily = ScriptedReviewer(
+        {first: QuotaExhausted("all 1 Gemini API keys are rate-limited; next available in 60631 s")}
+    )
+    stopped = run_experiment(
+        experiment, inputs, tmp_path / "r2", daily, log=lambda _l: None, sleep=waits.append
+    )
+    assert stopped.stopped_for_quota and waits == [45, 45]
 
 
 def test_runner_respects_limit(tmp_path: Path) -> None:

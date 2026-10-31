@@ -105,7 +105,7 @@ def summarize_arm(
 
     comments: list[float] = []
     matched = total_comments = 0
-    candidates = invalid = duplicates = filtered = 0
+    candidates = invalid = duplicates = filtered = refuted = 0
     tokens_in: list[float] = []
     tokens_cached: list[float] = []
     tokens_out: list[float] = []
@@ -130,27 +130,35 @@ def summarize_arm(
                 invalid += candidate["status"] == "invalid"
                 duplicates += candidate["status"] == "duplicate"
                 filtered += candidate["status"] == "filtered"
+                refuted += candidate["status"] == "refuted"
             context_tokens.append(float(run["context"]["estimatedTokens"]))
             llm = run.get("llm")
+            # A verifier pass is part of the review's cost: its calls count toward the
+            # review's tokens, cost and latency.
+            extra = (run.get("verifier") or {}).get("calls", [])
             if llm:
                 llm_calls += 1
                 # Providers report cached prompt tokens separately (Gemini caches a shared
                 # prefix on its own). The prompt's size is the sum; comparing uncached
                 # tokens alone would make whichever arm ran second look smaller.
-                usage = llm["usage"]
-                cached_tokens = float(usage.get("cacheReadInputTokens", 0))
+                calls = [llm, *extra]
+                usages = [c["usage"] for c in calls]
+                cached_tokens = sum(float(u.get("cacheReadInputTokens", 0)) for u in usages)
                 tokens_in.append(
-                    float(usage["inputTokens"])
-                    + cached_tokens
-                    + float(usage.get("cacheCreationInputTokens", 0))
+                    sum(
+                        float(u["inputTokens"])
+                        + float(u.get("cacheReadInputTokens", 0))
+                        + float(u.get("cacheCreationInputTokens", 0))
+                        for u in usages
+                    )
                 )
                 tokens_cached.append(cached_tokens)
-                tokens_out.append(float(llm["usage"]["outputTokens"]))
-                if llm.get("costUsd") is not None:
-                    costs.append(float(llm["costUsd"]))
+                tokens_out.append(sum(float(u["outputTokens"]) for u in usages))
+                if all(c.get("costUsd") is not None for c in calls):
+                    costs.append(sum(float(c["costUsd"]) for c in calls))
                 # A response served from the cache has no meaningful latency.
                 if not llm.get("cached"):
-                    latencies.append(float(llm["latencyMs"]) / 1000)
+                    latencies.append(sum(float(c["latencyMs"]) for c in calls) / 1000)
                 fallbacks += bool(llm.get("fallbackUsed"))
                 served[llm["servedModel"]] = served.get(llm["servedModel"], 0) + 1
 
@@ -175,6 +183,8 @@ def summarize_arm(
         "candidates_duplicate_rate": (duplicates / candidates) if candidates else None,
         # Valid, unique comments the learned filter dropped (0 when the filter is off).
         "candidates_filtered_rate": (filtered / candidates) if candidates else None,
+        # Valid, unique comments the verifier pass did not uphold (0 when it is off).
+        "candidates_refuted_rate": (refuted / candidates) if candidates else None,
         "context_tokens_estimated": stats.mean(context_tokens),
         "tokens_in": stats.mean(tokens_in),
         # Share of prompt tokens the provider served from its cache (billed at a discount).
