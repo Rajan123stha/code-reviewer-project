@@ -288,6 +288,12 @@ It listens on 127.0.0.1 only, unless `DASHBOARD_PASSWORD` is set: review data co
 from the reviewed repositories. The demo shows a banner on every page so its synthetic data
 is never mistaken for real results. [ADR 0011](docs/adr/0011-dashboard.md) has the design.
 
+## Technical report
+
+[docs/paper.md](docs/paper.md) is generated from [docs/paper/template.md](docs/paper/template.md) by
+`make paper`: every number is read from the benchmark manifest and the result files, and an
+experiment that has not been run is marked as such. Edit the template, never the output.
+
 ## Deployment
 
 Docker images for the api, worker, dashboard and filter service, a compose file, and a
