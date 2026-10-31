@@ -72,6 +72,8 @@ export interface CandidateDetail {
   rank: number | null;
   llmConfidence: number;
   filterScore: number | null;
+  verifierAgreement: number | null;
+  verifierVerdicts: { verdict: string; reason: string }[];
   posted: boolean;
   githubCommentId: number | null;
   outcomes: FeedbackOutcome[];
@@ -86,6 +88,7 @@ export interface ReviewDetail extends ReviewSummary {
   schemaName: string | null;
   featuresVersion: string | null;
   filterModel: string | null;
+  verifier: unknown;
   fallbackUsed: boolean;
   cacheReadTokens: number | null;
   llmAttempts: number | null;

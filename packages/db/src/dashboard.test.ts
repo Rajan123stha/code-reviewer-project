@@ -45,6 +45,8 @@ function run(latencyMs: number, costUsd: number): ReviewRun {
     rank: status === 'selected' ? index + 1 : null,
     features: null,
     filterScore: null,
+    verifierAgreement: null,
+    verifierVerdicts: [],
     body: `body ${index}`,
   });
   const candidates = [
@@ -67,6 +69,7 @@ function run(latencyMs: number, costUsd: number): ReviewRun {
     redactions: {},
     featuresVersion: 'features/v1',
     policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
+    verifier: null,
     filter: null,
     llm: {
       provider: 'gemini',

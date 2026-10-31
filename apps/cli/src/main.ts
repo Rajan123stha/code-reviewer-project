@@ -22,6 +22,7 @@ import {
   judgeComment,
   presetFor,
   STRATEGY_IDS,
+  VERIFY_SCHEMA_NAME,
   runReview,
   strategyConfigSchema,
   type JudgeItem,
@@ -236,6 +237,16 @@ async function review(values: Values) {
       : (scripted as { comments: unknown }).comments;
     llm = new LLMClient({
       provider: new FakeProvider((req) => {
+        // The verifier pass, when enabled, upholds every scripted comment.
+        if (req.schemaName === VERIFY_SCHEMA_NAME) {
+          return {
+            verdicts: (comments as unknown[]).map((_, id) => ({
+              id,
+              verdict: 'upheld',
+              reason: 'scripted',
+            })),
+          };
+        }
         if (values['dry-run']) captured = { system: req.system, prompt: req.prompt };
         return { comments };
       }, ZERO_USAGE),

@@ -40,6 +40,8 @@ function run(costUsd: number): ReviewRun {
     rank: index + 1,
     features: FEATURES as never,
     filterScore: null,
+    verifierAgreement: null,
+    verifierVerdicts: [],
     body: `body ${index}`,
   });
   const candidates = [candidate(0, 'selected'), candidate(1, 'selected'), candidate(2, 'over_cap')];
@@ -58,6 +60,7 @@ function run(costUsd: number): ReviewRun {
     redactions: {},
     featuresVersion: 'features/v1',
     policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
+    verifier: null,
     filter: null,
     llm: {
       provider: 'gemini',

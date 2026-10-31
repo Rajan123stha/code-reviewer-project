@@ -19,7 +19,15 @@ import { href, useApi } from '../lib.js';
 
 type Filter = 'all' | 'posted' | 'not_posted';
 
-const STATUS_ORDER = ['selected', 'over_cap', 'filtered', 'suppressed', 'duplicate', 'invalid'];
+const STATUS_ORDER = [
+  'selected',
+  'over_cap',
+  'filtered',
+  'refuted',
+  'suppressed',
+  'duplicate',
+  'invalid',
+];
 
 export function ReviewDetailPage({ id }: { id: string }) {
   const review = useApi<ReviewDetail>(`/api/reviews/${encodeURIComponent(id)}`);
@@ -223,6 +231,12 @@ function CandidateItem({ c, repo, sha }: { c: CandidateDetail; repo: string; sha
         <span className="spacer" />
         <span className="cell-sub">model confidence</span>
         <ScoreBar value={c.llmConfidence} label="Model confidence" />
+        {c.verifierAgreement !== null && (
+          <>
+            <span className="cell-sub">verifier</span>
+            <ScoreBar value={c.verifierAgreement} label="Verifier agreement" />
+          </>
+        )}
         {c.filterScore !== null && (
           <>
             <span className="cell-sub">filter</span>
@@ -234,6 +248,17 @@ function CandidateItem({ c, repo, sha }: { c: CandidateDetail; repo: string; sha
         <InlineCode text={c.claim} />
       </p>
       {c.rejectReason && <p className="cell-sub">Rejected: {humanize(c.rejectReason)}</p>}
+      {c.verifierVerdicts.length > 0 && (
+        <p className="cell-sub">
+          Verifier:{' '}
+          {c.verifierVerdicts.map((v, i) => (
+            <span key={i}>
+              {i > 0 && ' · '}
+              <strong>{v.verdict}</strong> ({v.reason})
+            </span>
+          ))}
+        </p>
+      )}
       {c.duplicateOf !== null && <p className="cell-sub">Duplicate of comment #{c.duplicateOf}</p>}
       <pre className="code">{c.evidence}</pre>
       {c.suggestedFix && (

@@ -172,6 +172,7 @@ export const CANDIDATE_STATUS: Record<string, { tone: Tone; label: string; hint:
     label: 'Filtered',
     hint: 'Scored below the learned filter threshold',
   },
+  refuted: { tone: 'serious', label: 'Refuted', hint: 'The verifier pass did not uphold it' },
   suppressed: { tone: 'neutral', label: 'Suppressed', hint: 'Excluded by the repository policy' },
   duplicate: {
     tone: 'neutral',

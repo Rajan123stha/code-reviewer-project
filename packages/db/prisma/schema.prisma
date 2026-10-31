@@ -96,6 +96,8 @@ model Review {
   featuresVersion  String?            @map("features_version")
   /// Version of the filter model that scored this review; null when the filter was off.
   filterModel      String?            @map("filter_model")
+  /// Verifier pass summary: passes, threshold, refuted count and its LLM calls.
+  verifier         Json?              @map("verifier_json")
   githubReviewId   BigInt?            @map("github_review_id")
   startedAt        DateTime           @default(now()) @map("started_at")
   finishedAt       DateTime?          @map("finished_at")
@@ -124,7 +126,10 @@ model CandidateComment {
   filterScore      Float?            @map("filter_score")
   /// Filter inputs as computed by the pipeline; null for invalid candidates.
   features         Json?             @map("features_json")
-  /// selected | over_cap | filtered | duplicate | invalid
+  /// Mean verifier verdict score (upheld 1, uncertain 0.5, refuted 0); null if not verified.
+  verifierAgreement Float? @map("verifier_agreement")
+  verifierVerdicts  Json?  @map("verifier_verdicts_json")
+  /// selected | over_cap | filtered | refuted | suppressed | duplicate | invalid
   status           String
   rejectReason     String?           @map("reject_reason")
   duplicateOfIndex Int?              @map("duplicate_of_index")

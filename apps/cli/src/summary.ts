@@ -52,6 +52,11 @@ export function summarize(run: ReviewRun): string {
     llm
       ? `llm: ${llm.servedModel}${llm.fallbackUsed ? ' (fallback)' : ''} · ${llm.usage.inputTokens} in / ${llm.usage.outputTokens} out · $${llm.costUsd?.toFixed(4) ?? '?'} · ${(llm.latencyMs / 1000).toFixed(1)}s${llm.cached ? ' (cached)' : ''}`
       : 'llm: not called (nothing reviewable)',
+    ...(run.verifier
+      ? [
+          `verifier: ${run.verifier.passes} pass${run.verifier.passes === 1 ? '' : 'es'}; refuted ${run.verifier.refuted} of ${run.verifier.verified}`,
+        ]
+      : []),
     ...(run.filter
       ? [
           `filter: ${run.filter.modelVersion} at threshold ${run.filter.threshold}; dropped ${run.filter.dropped} of ${run.filter.scored}`,
