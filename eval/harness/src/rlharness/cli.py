@@ -6,6 +6,7 @@ rlharness comments <experiment.yaml>  sample posted comments for precision label
 rlharness label <experiment.yaml>     label sampled comments (valid / nitpick / invalid)
 rlharness judge <experiment.yaml>     run the LLM judge over the sampled comments
 rlharness paper                       regenerate docs/paper.md from the result files
+rlharness plan <experiment.yaml>      model calls still needed, and days on your keys
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from rlbench import manifest as manifest_io
 from rlbench import validation
 
 from . import comments as comments_mod
-from . import filtercheck, paper, report, spec
+from . import filtercheck, paper, plan, report, spec
 from .metrics import load_arm
 from .runner import DEFAULT_CLI, REPO_ROOT, CliReviewer, repo_dir, run_experiment
 
@@ -187,6 +188,18 @@ def cmd_judge(args: argparse.Namespace) -> int:
     return subprocess.run(cmd, cwd=REPO_ROOT).returncode
 
 
+def cmd_plan(args: argparse.Namespace) -> int:
+    experiment, _manifest, inputs, _cases = prepare(args.experiment)
+    keys = args.keys
+    if keys is None:
+        keys = plan.count_keys(REPO_ROOT / ".env", dict(os.environ))
+    made = plan.make_plan(
+        experiment, inputs, results_dir(experiment, args.results), keys, args.daily_per_key
+    )
+    print(made.to_text(experiment.name))
+    return 0
+
+
 def cmd_paper(args: argparse.Namespace) -> int:
     out = paper.write(args.out)
     print(f"wrote {out}")
@@ -234,6 +247,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model")
     p.add_argument("--fake-llm", action="store_true")
     p.set_defaults(func=cmd_judge)
+
+    p = sub.add_parser("plan", help="model calls still needed, and days on your keys")
+    common(p)
+    p.add_argument("--keys", type=int, help="number of API keys (default: count GEMINI_API_KEYS)")
+    p.add_argument("--daily-per-key", type=int, default=plan.DEFAULT_DAILY_PER_KEY)
+    p.set_defaults(func=cmd_plan)
 
     p = sub.add_parser("paper", help="regenerate docs/paper.md from the result files")
     p.add_argument("--out", type=Path, default=paper.OUTPUT)

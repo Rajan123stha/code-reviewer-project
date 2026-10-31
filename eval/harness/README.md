@@ -59,7 +59,11 @@ cannot mix two models.
 - **Cached.** LLM responses, parsed files and embeddings are cached under
   `~/.cache/reviewlens/eval`. Each repeat uses its own cache salt, so repeats are independent
   samples while a re-run of the same repeat costs nothing.
-- **`--workers N`** runs reviews in parallel (default 1, which suits free-tier quotas).
+- **Plan first.** `python -m rlharness.cli plan <experiment.yaml>` (`make eval-plan`) prints the
+  reviews left, the model calls they need after cache sharing (verifier passes counted
+  separately), and how many days that takes at a given daily quota per key.
+- **`--workers N`** runs reviews in parallel (default 1). Each worker starts its key rotation at a
+  different key, so with N keys in `GEMINI_API_KEYS`, `--workers N` uses them side by side.
   **`--limit N`** stops after N reviews.
 - The results directory is keyed by the spec's hash: changing a spec never mixes old and new runs.
 

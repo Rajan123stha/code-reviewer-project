@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -55,6 +56,10 @@ class CliReviewer:
     timeout_seconds: float = 20 * 60
     repo_dir_of: Callable[[str], Path] = repo_dir
     extra_args: tuple[str, ...] = ()
+    # Each worker thread starts its key rotation at a different key, so parallel
+    # workers spread over the keys instead of all exhausting the first one.
+    _slots: dict[int, int] = field(default_factory=dict, repr=False)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def command(self, item: ReviewInput, arm: Arm, run_index: int, out: Path) -> list[str]:
         caches = cache_root() / "eval"
@@ -93,7 +98,12 @@ class CliReviewer:
             cmd += ["--fake-llm", str(self.fake_llm)]
         return cmd
 
+    def key_offset(self) -> int:
+        with self._lock:
+            return self._slots.setdefault(threading.get_ident(), len(self._slots))
+
     def review(self, item: ReviewInput, arm: Arm, run_index: int, out: Path) -> None:
+        env = {**os.environ, "GEMINI_KEY_OFFSET": str(self.key_offset())}
         proc = subprocess.run(
             self.command(item, arm, run_index, out),
             capture_output=True,
@@ -102,6 +112,7 @@ class CliReviewer:
             errors="replace",
             timeout=self.timeout_seconds,
             cwd=REPO_ROOT,
+            env=env,
         )
         if proc.returncode == 0:
             return

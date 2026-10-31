@@ -37,6 +37,8 @@ export const llmEnvSchema = z.object({
   /** Several keys, separated by commas or whitespace; used in rotation. */
   GEMINI_API_KEYS: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  /** Start the key rotation at this position (parallel eval workers use one each). */
+  GEMINI_KEY_OFFSET: z.coerce.number().int().min(0).optional(),
   /** Free-tier keys are not billed, so recorded cost is 0. Default true. */
   GEMINI_FREE_TIER: booleanish,
   ANTHROPIC_API_KEY: z.string().optional(),
@@ -73,7 +75,10 @@ export function createLLMFromEnv(
   let provider: LLMProvider;
   let costFn: ((model: string) => number | null) | undefined;
 
-  const geminiKeys = parseKeyList(env.GEMINI_API_KEYS, env.GEMINI_API_KEY);
+  const geminiKeys = rotate(
+    parseKeyList(env.GEMINI_API_KEYS, env.GEMINI_API_KEY),
+    env.GEMINI_KEY_OFFSET ?? 0,
+  );
   const keyRunner =
     geminiKeys.length > 0
       ? new GeminiKeyRunner({
@@ -108,4 +113,11 @@ export function createLLMFromEnv(
       })
     : undefined;
   return { llm, provider: name, embeddings };
+}
+
+/** The list starting at `offset` (modulo its length), wrapping around. */
+export function rotate<T>(items: readonly T[], offset: number): T[] {
+  if (items.length === 0) return [];
+  const start = offset % items.length;
+  return [...items.slice(start), ...items.slice(0, start)];
 }

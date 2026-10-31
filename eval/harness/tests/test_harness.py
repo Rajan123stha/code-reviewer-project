@@ -316,6 +316,62 @@ def test_runner_waits_out_short_rate_limits_but_stops_on_daily_quota(tmp_path: P
     assert stopped.stopped_for_quota and waits == [45, 45]
 
 
+def test_plan_counts_shared_review_calls_and_verifier_passes(tmp_path: Path) -> None:
+    from rlharness import plan
+    from rlharness.runner import result_path
+
+    experiment = write_spec(
+        tmp_path,
+        "runs: 2\narms:\n"
+        "  - {id: off, strategy: S4, config: {verifierPasses: 0}}\n"
+        "  - {id: on, strategy: S4, config: {verifierPasses: 3}}\n"
+        "  - {id: s2, strategy: S2}\n",
+    )
+    inputs, _ = spec.select_cases([case("c1"), case("c2")], experiment)
+    results = tmp_path / "r"
+    done = result_path(results, experiment.arms[0], 1, inputs[0])
+    done.parent.mkdir(parents=True)
+    done.write_text("{}", encoding="utf-8")
+
+    made = plan.make_plan(experiment, inputs, results, keys=2, daily_per_key=10)
+    assert (made.reviews_total, made.reviews_done, made.reviews_remaining) == (12, 1, 11)
+    # off and on share one S4 request per (run, input): 4, minus nothing (on is not done);
+    # S2 is a separate request: 4 more.
+    assert made.review_calls == 8
+    assert made.verifier_calls == 3 * 4
+    assert made.s2_reviews == 4
+    assert made.days == 20 / 20
+    text = made.to_text("E")
+    assert "11 remaining" in text and "keys needed to finish in one day: 2" in text
+
+
+def test_plan_counts_keys_without_reading_them_out(tmp_path: Path) -> None:
+    from rlharness import plan
+
+    env = tmp_path / ".env"
+    env.write_text("OTHER=1\nGEMINI_API_KEYS=aaa, bbb ,ccc\n", encoding="utf-8")
+    assert plan.count_keys(env, {}) == 3
+    assert plan.count_keys(env, {"GEMINI_API_KEYS": "x"}) == 1
+    assert plan.count_keys(tmp_path / "missing", {}) == 0
+
+
+def test_cli_reviewer_gives_each_worker_its_own_starting_key() -> None:
+    import threading
+
+    reviewer = CliReviewer(cli=Path("cli.js"))
+    seen: list[int] = []
+    threads = [
+        threading.Thread(target=lambda: seen.append(reviewer.key_offset())) for _ in range(3)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sorted(seen) == [0, 1, 2]
+    assert reviewer.key_offset() == 3  # the main thread is a fourth worker
+    assert reviewer.key_offset() == 3  # and keeps its slot
+
+
 def test_runner_respects_limit(tmp_path: Path) -> None:
     experiment = write_spec(tmp_path, TWO_ARMS)
     inputs, _ = spec.select_cases([case("c1"), case("c2")], experiment)
