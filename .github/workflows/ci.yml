@@ -34,6 +34,23 @@ jobs:
       # Nothing server-side may end up in code shipped to browsers.
       - name: Client bundle holds no secrets or server-only settings
         run: node scripts/secret-scan.mjs --paths apps/dashboard/dist/client --deny-names
+      # Prompt-injection, secret-leak and tag-breakout cases against the real prompt builder.
+      # No model is called; `node scripts/redteam.mjs --live` adds the model-output checks.
+      - name: Red-team prompt checks
+        run: node scripts/redteam.mjs
+
+  # Known vulnerabilities in what ships. Dev-only tooling is reported, not blocking.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm audit --prod --audit-level high
+      - run: pnpm audit || true
 
   benchmark:
     runs-on: ubuntu-latest
