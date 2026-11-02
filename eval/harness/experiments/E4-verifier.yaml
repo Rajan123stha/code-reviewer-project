@@ -1,7 +1,8 @@
 name: E4-verifier
 description: >-
   S4 with and without a second verifier pass that tries to refute each candidate comment.
-# The verifier pass is not built yet; the harness refuses to run this until it is.
+# Both arms share one cached review call per input and run, so they are compared on
+# identical candidate comments; only the verifier differs.
 requires: [verifier]
 manifest: ../../benchmark/manifests/benchmark-a.v1.json
 cases:
@@ -20,5 +21,6 @@ base:
   effort: low
 baseline: no-verifier
 arms:
-  - { id: no-verifier, strategy: S4, config: { verifier: false } }
-  - { id: verifier, strategy: S4, config: { verifier: true } }
+  - { id: no-verifier, strategy: S4, config: { verifierPasses: 0 } }
+  - { id: verifier, strategy: S4, config: { verifierPasses: 1 } }
+  - { id: verifier-3, strategy: S4, config: { verifierPasses: 3 } }

@@ -5,7 +5,7 @@ import type { EnqueueFeedback, EnqueueIndex, EnqueueReview } from './queue.js';
 import { verifyGitHubSignature } from './signature.js';
 
 /** pull_request actions that trigger a review. */
-export const REVIEW_ACTIONS = new Set(['opened', 'synchronize']);
+export const REVIEW_ACTIONS = new Set(['opened', 'synchronize', 'ready_for_review']);
 
 /** GitHub caps webhook payloads at 25 MB. */
 const MAX_PAYLOAD_BYTES = 25 * 1024 * 1024;
@@ -179,6 +179,7 @@ export const webhookRoutes: FastifyPluginAsync<WebhookOptions> = async (app, opt
           pullNumber: pr.number,
           headSha: pr.head.sha,
           baseSha: pr.base.sha,
+          ...(action === 'ready_for_review' ? { trigger: 'ready_for_review' as const } : {}),
         }),
     );
     log.info({ jobId, action, pr: pr.number }, 'review job enqueued');

@@ -74,6 +74,15 @@ export const strategyConfigSchema = z.strictObject({
   /** Pin the filter model version; the review fails if another is served. Null: any. */
   filterModel: z.string().min(1).nullable(),
 
+  /**
+   * Verifier: model passes that try to refute each unique candidate (E4). 0: off. Each
+   * pass is one extra call covering every comment of the review.
+   */
+  verifierPasses: z.number().int().min(0).max(5),
+  verifierPromptVersion: z.string().regex(/^[a-z-]+\/v\d+$/),
+  /** Comments whose mean verdict score is below this are dropped (upheld 1, uncertain 0.5, refuted 0). */
+  verifierThreshold: z.number().min(0).max(1),
+
   /** Anthropic only: rerun policy-declined requests on a fallback model. */
   refusalFallback: z.boolean(),
 });
@@ -105,6 +114,9 @@ const BASE = {
   embeddingTopK: 0,
   filterThreshold: null,
   filterModel: null,
+  verifierPasses: 0,
+  verifierPromptVersion: 'verify/v1',
+  verifierThreshold: 0.5,
   refusalFallback: false,
 } as const;
 

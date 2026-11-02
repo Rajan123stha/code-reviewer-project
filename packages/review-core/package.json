@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "prompts"
+  ],
   "exports": {
     ".": {
       "source": "./src/index.ts",

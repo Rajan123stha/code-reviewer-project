@@ -49,6 +49,7 @@ function fakeGitHub(
   opts: {
     headSha?: string;
     state?: string;
+    draft?: boolean;
     postError?: Error;
     policy?: string;
     diff?: string;
@@ -61,7 +62,7 @@ function fakeGitHub(
           title: 'Add y',
           body: 'adds y',
           state: opts.state ?? 'open',
-          draft: false,
+          draft: opts.draft ?? false,
           head: { sha: opts.headSha ?? HEAD },
           base: { sha: BASE },
         },
@@ -168,6 +169,18 @@ describe('processReviewJob', () => {
       'GET /repos/{owner}/{repo}/contents/{path}',
       expect.objectContaining({ path: '.reviewlens.yml', ref: BASE }),
     );
+  });
+
+  it('skips drafts unless the repository asks for draft reviews', async () => {
+    const draft = deps([GOOD_COMMENT], fakeGitHub({ draft: true }));
+    expect(await processReviewJob(job, draft.deps)).toEqual({ status: 'skipped', reason: 'draft' });
+    expect(draft.provider.requests).toHaveLength(0);
+
+    const optedIn = deps(
+      [GOOD_COMMENT],
+      fakeGitHub({ draft: true, policy: 'review_drafts: true\n' }),
+    );
+    expect(await processReviewJob(job, optedIn.deps)).toMatchObject({ status: 'posted' });
   });
 
   it('skips repositories that switched reviews off', async () => {

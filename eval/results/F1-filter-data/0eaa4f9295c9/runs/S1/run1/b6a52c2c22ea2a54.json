@@ -1,0 +1,82 @@
+{
+  "config": {
+    "strategy": "S1",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 0,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "26d85e03374bc12b",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S1",
+    "budget": 16000,
+    "estimatedTokens": 5934,
+    "diffFiles": {
+      "included": [
+        "lib/validation.js",
+        "test/security.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [
+        "lib/validation.js",
+        "test/security.js"
+      ],
+      "omitted": []
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 7042,
+      "outputTokens": 9,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 26155.4107,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "CrLlavOUFpv0694P1OPcuA8"
+  },
+  "filter": null,
+  "candidates": [],
+  "selected": [],
+  "startedAt": "2026-10-31T09:16:56.943Z",
+  "finishedAt": "2026-10-31T09:17:23.170Z"
+}

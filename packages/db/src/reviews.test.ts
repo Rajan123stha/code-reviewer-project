@@ -41,6 +41,8 @@ function run(): ReviewRun {
     rank: 1,
     features: null,
     filterScore: 0.82,
+    verifierAgreement: null,
+    verifierVerdicts: [],
     body: '**Bug (high)**: off by one',
   };
   return {
@@ -57,7 +59,15 @@ function run(): ReviewRun {
     },
     redactions: {},
     featuresVersion: 'features/v1',
-    policy: { enabled: true, maxComments: null, minSeverity: 'low', categories: null, ignore: [] },
+    policy: {
+      enabled: true,
+      reviewDrafts: false,
+      maxComments: null,
+      minSeverity: 'low',
+      categories: null,
+      ignore: [],
+    },
+    verifier: null,
     filter: { modelVersion: 'lr-abc', threshold: 0.3, scored: 1, dropped: 0 },
     llm: {
       provider: 'anthropic',

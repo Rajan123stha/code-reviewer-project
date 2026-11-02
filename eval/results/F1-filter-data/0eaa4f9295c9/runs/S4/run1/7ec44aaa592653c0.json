@@ -1,0 +1,202 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 2438,
+    "diffFiles": {
+      "included": [
+        "lib/pack.js",
+        "lib/schema.js",
+        "test/pack.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 186,
+        "filesIndexed": 99,
+        "parsed": 99,
+        "fromCache": 0,
+        "unreadable": 0,
+        "durationMs": 3814
+      },
+      "symbols": 855,
+      "edges": 323,
+      "callsResolved": 2923,
+      "callsTotal": 9817,
+      "changedSymbols": [
+        "lib/pack.js:<module>",
+        "lib/schema.js:<module>",
+        "test/pack.js:<module>"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/schema.js:assert",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "test/pack.js:expect",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        },
+        {
+          "name": "test/pack.js:it",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 214
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 3392,
+      "outputTokens": 257,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 25381.0785,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "ubHlapL5Gqzu694P-YiB6QE"
+  },
+  "filter": null,
+  "candidates": [
+    {
+      "file": "lib/schema.js",
+      "line": 170,
+      "category": "bug",
+      "severity": "high",
+      "claim": "manifest server options schema uses internals.serverBase, which lacks support for cache options on servers.",
+      "evidence": "options: internals.serverBase",
+      "suggested_fix": "internals.serverManifest = Joi.object({\n    host: Joi.string(),\n    port: Joi.alternatives([\n        Joi.number(),\n        Joi.string().regex(/^\\$env\\..+$/i)\n    ]),\n    options: internals.serverBase.concat(Joi.object({\n        cache: Joi.alternatives([\n            Joi.string(),\n            internals.cacheManifest,\n            Joi.func(),\n            Joi.array().includes(internals.cacheManifest).min(1)\n        ]).allow(null)\n    }))\n});",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 107,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 71,
+        "prChangedLines": 125,
+        "prFiles": 3,
+        "symbolCallers": null,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: manifest server options schema uses internals.serverBase, which lacks support for cache options on servers.\n\n> `options: internals.serverBase`\n\n**Suggested fix:** internals.serverManifest = Joi.object({\n    host: Joi.string(),\n    port: Joi.alternatives([\n        Joi.number(),\n        Joi.string().regex(/^\\$env\\..+$/i)\n    ]),\n    options: internals.serverBase.concat(Joi.object({\n        cache: Joi.alternatives([\n            Joi.string(),\n            internals.cacheManifest,\n            Joi.func(),\n            Joi.array().includes(internals.cacheManifest).min(1)\n        ]).allow(null)\n    }))\n});"
+    }
+  ],
+  "selected": [
+    {
+      "file": "lib/schema.js",
+      "line": 170,
+      "category": "bug",
+      "severity": "high",
+      "claim": "manifest server options schema uses internals.serverBase, which lacks support for cache options on servers.",
+      "evidence": "options: internals.serverBase",
+      "suggested_fix": "internals.serverManifest = Joi.object({\n    host: Joi.string(),\n    port: Joi.alternatives([\n        Joi.number(),\n        Joi.string().regex(/^\\$env\\..+$/i)\n    ]),\n    options: internals.serverBase.concat(Joi.object({\n        cache: Joi.alternatives([\n            Joi.string(),\n            internals.cacheManifest,\n            Joi.func(),\n            Joi.array().includes(internals.cacheManifest).min(1)\n        ]).allow(null)\n    }))\n});",
+      "confidence": 0.95,
+      "index": 0,
+      "status": "selected",
+      "rejectReason": null,
+      "duplicateOf": null,
+      "rank": 1,
+      "features": {
+        "category": "bug",
+        "severity": "high",
+        "confidence": 0.95,
+        "claimChars": 107,
+        "evidenceLines": 1,
+        "hasFix": true,
+        "evidenceInAddedLines": true,
+        "fileExt": "js",
+        "isTest": false,
+        "lineIsAdded": true,
+        "fileChangedLines": 71,
+        "prChangedLines": 125,
+        "prFiles": 3,
+        "symbolCallers": null,
+        "strategy": "S4",
+        "duplicateClusterSize": 1,
+        "candidatesInReview": 1,
+        "verifierAgreement": null,
+        "repoCategoryAcceptRate": null
+      },
+      "filterScore": null,
+      "body": "**Bug (high)**: manifest server options schema uses internals.serverBase, which lacks support for cache options on servers.\n\n> `options: internals.serverBase`\n\n**Suggested fix:** internals.serverManifest = Joi.object({\n    host: Joi.string(),\n    port: Joi.alternatives([\n        Joi.number(),\n        Joi.string().regex(/^\\$env\\..+$/i)\n    ]),\n    options: internals.serverBase.concat(Joi.object({\n        cache: Joi.alternatives([\n            Joi.string(),\n            internals.cacheManifest,\n            Joi.func(),\n            Joi.array().includes(internals.cacheManifest).min(1)\n        ]).allow(null)\n    }))\n});"
+    }
+  ],
+  "startedAt": "2026-10-31T09:15:32.274Z",
+  "finishedAt": "2026-10-31T09:16:01.551Z"
+}

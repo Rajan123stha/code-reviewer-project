@@ -16,3 +16,4 @@ export * from './features.js';
 export * from './filter.js';
 export * from './policy.js';
 export * from './resolution.js';
+export * from './verify.js';

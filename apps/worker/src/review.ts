@@ -61,7 +61,10 @@ export type ReviewJobResult =
       costUsd: number | null;
     }
   | { status: 'already_posted'; reviewId: number }
-  | { status: 'skipped'; reason: 'superseded' | 'closed' | 'disabled' | LimitReason };
+  | {
+      status: 'skipped';
+      reason: 'superseded' | 'closed' | 'draft' | 'disabled' | LimitReason;
+    };
 
 export async function processReviewJob(
   job: ReviewJobData,
@@ -102,6 +105,12 @@ export async function processReviewJob(
         if (!policy.enabled) {
           log.info('reviews are disabled by the repository policy');
           return { status: 'skipped', reason: 'disabled' };
+        }
+        // Drafts are reviewed once marked ready (a separate webhook), unless the repository
+        // asks for draft reviews. Waiting saves a review of every work-in-progress push.
+        if (pr.draft && !policy.reviewDrafts) {
+          log.info('skipping draft pull request');
+          return { status: 'skipped', reason: 'draft' };
         }
 
         const limits = deps.limits ?? NO_LIMITS;

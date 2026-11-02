@@ -92,3 +92,86 @@ export async function judgeComment(
     cached: result.cached,
   };
 }
+
+// --- Bug match: does a comment describe the bug a later fix corrected? -----------------------
+
+export const MATCH_VERDICTS = ['same_bug', 'different_issue', 'unclear'] as const;
+export type MatchVerdict = (typeof MATCH_VERDICTS)[number];
+
+export const MATCH_SCHEMA_NAME = 'match-verdict/v1';
+export const matchOutputSchema = z.object({
+  verdict: z.enum(MATCH_VERDICTS),
+  reason: z.string(),
+});
+
+export interface MatchItem {
+  id: string;
+  path: string;
+  line: number;
+  category: string;
+  claim: string;
+  evidence: string;
+  fix_subject: string;
+  /** The fix's diff, limited to the files with ground truth. */
+  fix_diff: string;
+  /** Lines of the reviewed commit that the fix removed or rewrote, in `path`. */
+  truth_lines: number[];
+}
+
+export interface MatchResult {
+  id: string;
+  verdict: MatchVerdict;
+  reason: string;
+  promptVersion: string;
+  promptHash: string;
+  requestedModel: string;
+  servedModel: string;
+  cached: boolean;
+}
+
+/**
+ * Semantic matching for the benchmark (spec §8: "calibrated LLM judge second"). Unlike the
+ * precision judge, this one sees the later fix: its question is whether the comment is about
+ * that bug. Location matching finds the candidates; this decides which of them count. Like
+ * the precision judge it is an instrument whose agreement with human labels is measured
+ * before its numbers are reported.
+ */
+export async function judgeMatch(
+  item: MatchItem,
+  config: JudgeConfig,
+  llm: LLMClient,
+): Promise<MatchResult> {
+  const prompt = await loadPrompt(config.promptVersion ?? 'match/v1');
+  const scrub = (text: string) => scrubSecrets(text).text;
+  const user = renderTemplate(prompt.user, {
+    fix_subject: scrub(item.fix_subject),
+    path: item.path,
+    truth_lines: item.truth_lines.join(', '),
+    fix_diff: scrub(item.fix_diff),
+    line: String(item.line),
+    category: item.category,
+    claim: scrub(item.claim),
+    evidence: scrub(item.evidence),
+  });
+  const result = await llm.generate({
+    model: config.model,
+    fallbackModels: config.fallbackModels,
+    effort: config.effort ?? 'low',
+    system: prompt.system,
+    prompt: user,
+    schema: matchOutputSchema,
+    schemaName: MATCH_SCHEMA_NAME,
+    maxOutputTokens: 4_000,
+    cacheSalt: config.cacheSalt,
+  });
+  return {
+    id: item.id,
+    verdict: result.output.verdict,
+    reason: result.output.reason,
+    promptVersion: prompt.version,
+    promptHash: prompt.contentHash,
+    requestedModel: result.requestedModel,
+    servedModel: result.servedModel,
+    cached: result.cached,
+  };
+}

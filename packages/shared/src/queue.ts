@@ -13,6 +13,11 @@ export const reviewJobSchema = z.object({
   pullNumber: z.number().int().positive(),
   headSha: z.string().regex(/^[0-9a-f]{40}$/),
   baseSha: z.string().regex(/^[0-9a-f]{40}$/),
+  /**
+   * Set when a draft was marked ready for review. Its head commit may already have a
+   * (skipped) job, so this one needs its own id.
+   */
+  trigger: z.literal('ready_for_review').optional(),
 });
 
 export type ReviewJobData = z.infer<typeof reviewJobSchema>;
@@ -21,8 +26,11 @@ export type ReviewJobData = z.infer<typeof reviewJobSchema>;
  * Deterministic job id: one review per (repository, PR, head commit).
  * GitHub redeliveries and duplicate events for the same commit collapse into one job.
  */
-export function reviewJobId(data: Pick<ReviewJobData, 'repositoryId' | 'pullNumber' | 'headSha'>) {
-  return `pr-${data.repositoryId}-${data.pullNumber}-${data.headSha}`;
+export function reviewJobId(
+  data: Pick<ReviewJobData, 'repositoryId' | 'pullNumber' | 'headSha' | 'trigger'>,
+) {
+  const id = `pr-${data.repositoryId}-${data.pullNumber}-${data.headSha}`;
+  return data.trigger ? `${id}-ready` : id;
 }
 
 /** Indexing of a repository's default branch, triggered by pushes. */

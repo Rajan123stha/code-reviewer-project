@@ -15,3 +15,5 @@ services/filter/models/
 services/filter/data/
 services/filter/reports/
 *.ipynb
+# Generated from docs/paper/template.md by `make paper`.
+docs/paper.md

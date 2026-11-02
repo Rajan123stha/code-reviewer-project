@@ -13,7 +13,7 @@ import yaml
 
 # Capabilities the pipeline has today. A spec that `requires` anything else is refused, so an
 # ablation cannot silently run without the thing it is supposed to measure.
-AVAILABLE_FEATURES: frozenset[str] = frozenset({"filter"})
+AVAILABLE_FEATURES: frozenset[str] = frozenset({"filter", "verifier"})
 
 
 class SpecError(ValueError):

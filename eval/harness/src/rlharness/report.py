@@ -10,7 +10,7 @@ from typing import Any
 
 from rlbench import manifest as manifest_io
 
-from . import stats
+from . import semantic, stats
 from .comments import precision_summary
 from .metrics import ArmResults, compare_arms, load_arm, summarize_arm
 from .spec import Experiment, ReviewInput
@@ -68,6 +68,9 @@ def score(
     precision = precision_summary(results)
     if precision:
         summary["precision"] = precision
+    matched = semantic.summary(loaded, cases, case_ids, experiment.k, results, seed)
+    if matched:
+        summary["semantic"] = matched
     return summary
 
 
@@ -202,6 +205,36 @@ def to_markdown(summary: dict[str, Any]) -> str:
                 f"- **Judge vs human** on {calibration['shared']} comments: agreement "
                 f"{_pct(calibration['agreement'])}, Cohen's kappa {calibration['kappa']:.2f}"
             )
+
+    matched = summary.get("semantic")
+    if matched:
+        k_max = str(max(summary["k"]))
+        lines += [
+            "",
+            "## Semantic recall (LLM judge: does the comment describe the fixed bug?)",
+            "",
+            f"{matched['judged']} of {matched['pairs']} comment-bug pairs judged "
+            f"(coverage {_pct(matched['coverage'])}); "
+            + ", ".join(f"{v} {n}" for v, n in matched["verdicts"].items()),
+            "",
+            f"| Arm | Location recall@{k_max} | Semantic recall@{k_max} | 95% CI |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+        for arm in summary["arms"]:
+            s = matched["arms"][arm["arm"]]["recall_at"][k_max]
+            lines.append(
+                f"| {arm['arm']} | {_pct(arm['recall_at'][k_max]['mean'])} | {_pct(s['mean'])} | "
+                f"{_pct(s['ci95'][0])} to {_pct(s['ci95'][1])} |"
+            )
+        calibration = matched.get("calibration")
+        lines.append(
+            ""
+            if calibration is None
+            else f"\nJudge vs human on {calibration['shared']} pairs: agreement "
+            f"{_pct(calibration['agreement'])}, Cohen's kappa {calibration['kappa']:.2f}."
+        )
+        if calibration is None:
+            lines.append("Not calibrated: no human labels yet. Treat these numbers as unvalidated.")
 
     failed = sum(a["reviews_failed"] for a in summary["arms"])
     missing = sum(a["reviews_missing"] for a in summary["arms"])

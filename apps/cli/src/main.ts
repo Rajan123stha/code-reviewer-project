@@ -20,11 +20,14 @@ import {
 import {
   HttpCommentScorer,
   judgeComment,
+  judgeMatch,
   presetFor,
   STRATEGY_IDS,
+  VERIFY_SCHEMA_NAME,
   runReview,
   strategyConfigSchema,
   type JudgeItem,
+  type MatchItem,
   type ReviewInput,
   type StrategyId,
 } from '@reviewlens/review-core';
@@ -38,6 +41,7 @@ const USAGE = `Usage:
   reviewlens index --git <repo> [--head <rev>]           index a commit; print graph stats
   reviewlens index --repo <dir>                          index a working tree
   reviewlens judge --in <items.jsonl> --out <verdicts.jsonl>   LLM-judge review comments
+  reviewlens match --in <pairs.jsonl> --out <verdicts.jsonl>   does a comment describe the fixed bug?
 
 Review options:
   --strategy S0..S5     context strategy (default S1); see README for what each adds
@@ -236,6 +240,16 @@ async function review(values: Values) {
       : (scripted as { comments: unknown }).comments;
     llm = new LLMClient({
       provider: new FakeProvider((req) => {
+        // The verifier pass, when enabled, upholds every scripted comment.
+        if (req.schemaName === VERIFY_SCHEMA_NAME) {
+          return {
+            verdicts: (comments as unknown[]).map((_, id) => ({
+              id,
+              verdict: 'upheld',
+              reason: 'scripted',
+            })),
+          };
+        }
         if (values['dry-run']) captured = { system: req.system, prompt: req.prompt };
         return { comments };
       }, ZERO_USAGE),
@@ -282,12 +296,20 @@ async function review(values: Values) {
 }
 
 /** Judge comments from a JSONL file; appends one verdict per line, skipping ids already done. */
-async function judge(values: Values) {
-  if (!values.in || !values.out) throw new Error('judge needs --in <items.jsonl> and --out <file>');
+/**
+ * Run an LLM judge over a JSONL file; appends one verdict per line, skipping ids already
+ * done. `comment`: is a posted comment valid? `match`: does it describe the fixed bug?
+ */
+async function judge(values: Values, kind: 'comment' | 'match') {
+  if (!values.in || !values.out) {
+    throw new Error(
+      `${kind === 'match' ? 'match' : 'judge'} needs --in <items.jsonl> and --out <file>`,
+    );
+  }
   const items = (await readFile(values.in, 'utf8'))
     .split('\n')
     .filter((l) => l.trim())
-    .map((l) => JSON.parse(l) as JudgeItem);
+    .map((l) => JSON.parse(l) as JudgeItem & MatchItem);
   const done = new Set<string>();
   try {
     for (const line of (await readFile(values.out, 'utf8')).split('\n')) {
@@ -299,7 +321,10 @@ async function judge(values: Values) {
   const provider = providerName(values);
   const llm = values['fake-llm']
     ? new LLMClient({
-        provider: new FakeProvider(() => ({ verdict: 'valid', reason: 'scripted' }), ZERO_USAGE),
+        provider: new FakeProvider(
+          () => ({ verdict: kind === 'match' ? 'same_bug' : 'valid', reason: 'scripted' }),
+          ZERO_USAGE,
+        ),
       })
     : createLLMFromEnv(process.env, {
         provider,
@@ -314,11 +339,11 @@ async function judge(values: Values) {
   let judged = 0;
   for (const item of items) {
     if (done.has(item.id)) continue;
-    const result = await judgeComment(
-      item,
-      { model: values.model ?? DEFAULT_MODELS[provider], fallbackModels },
-      llm,
-    );
+    const config = { model: values.model ?? DEFAULT_MODELS[provider], fallbackModels };
+    const result =
+      kind === 'match'
+        ? await judgeMatch(item, config, llm)
+        : await judgeComment(item, config, llm);
     await appendFile(values.out, `${JSON.stringify(result)}\n`);
     judged++;
   }
@@ -329,12 +354,13 @@ async function main() {
   loadDotEnv();
   const { positionals, values } = parse();
   const command = positionals[0];
-  if (values.help || !['review', 'index', 'judge'].includes(command ?? '')) {
+  if (values.help || !['review', 'index', 'judge', 'match'].includes(command ?? '')) {
     console.error(USAGE);
     process.exit(values.help ? 0 : 2);
   }
   if (command === 'index') return index(values);
-  if (command === 'judge') return judge(values);
+  if (command === 'judge') return judge(values, 'comment');
+  if (command === 'match') return judge(values, 'match');
   return review(values);
 }
 

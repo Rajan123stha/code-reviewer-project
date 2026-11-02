@@ -1,0 +1,114 @@
+{
+  "config": {
+    "strategy": "S4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "fallbackModels": [],
+    "effort": "low",
+    "promptVersion": "review/v3",
+    "contextTokenBudget": 16000,
+    "maxOutputTokens": 16000,
+    "maxComments": 10,
+    "graphDepth": 2,
+    "maxSymbolTokens": 1500,
+    "useConventions": false,
+    "conventionsTokenCap": 600,
+    "usePastBugs": false,
+    "pastBugsTopK": 5,
+    "pastBugsTokenCap": 600,
+    "embeddingModel": "gemini-embedding-001",
+    "embeddingDimensions": 768,
+    "embeddingTopK": 0,
+    "filterThreshold": null,
+    "filterModel": null,
+    "refusalFallback": false
+  },
+  "configHash": "f151a0781e412f9d",
+  "prompt": {
+    "version": "review/v3",
+    "contentHash": "11d08bce9d27"
+  },
+  "schemaName": "review-comments/v1",
+  "context": {
+    "strategy": "S4",
+    "budget": 16000,
+    "estimatedTokens": 2017,
+    "diffFiles": {
+      "included": [
+        "lib/auth/index.js"
+      ],
+      "omitted": []
+    },
+    "fullFiles": {
+      "included": [],
+      "omitted": []
+    },
+    "graph": {
+      "index": {
+        "filesListed": 204,
+        "filesIndexed": 121,
+        "parsed": 119,
+        "fromCache": 2,
+        "unreadable": 0,
+        "durationMs": 3581
+      },
+      "symbols": 822,
+      "edges": 486,
+      "callsResolved": 2252,
+      "callsTotal": 6414,
+      "changedSymbols": [
+        "lib/auth/index.js:validate"
+      ]
+    },
+    "symbols": {
+      "included": [
+        {
+          "name": "lib/auth/index.js:validate",
+          "role": "enclosing",
+          "distance": 0,
+          "mode": "full"
+        },
+        {
+          "name": "lib/auth/index.js:authenticate",
+          "role": "callee",
+          "distance": 1,
+          "mode": "full"
+        }
+      ],
+      "signatureOnly": 0,
+      "omitted": 0,
+      "tokens": 1819
+    }
+  },
+  "redactions": {},
+  "featuresVersion": "features/v1",
+  "policy": {
+    "enabled": true,
+    "maxComments": null,
+    "minSeverity": "low",
+    "categories": null,
+    "ignore": []
+  },
+  "llm": {
+    "provider": "gemini",
+    "requestedModel": "gemini-3.5-flash",
+    "servedModel": "gemini-3.6-flash",
+    "fallbackUsed": false,
+    "usage": {
+      "inputTokens": 2602,
+      "outputTokens": 9,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "costUsd": 0,
+    "latencyMs": 15831.464500000002,
+    "attempts": 1,
+    "cached": false,
+    "requestId": "4LHlauzyNpfv694PnKXfgAM"
+  },
+  "filter": null,
+  "candidates": [],
+  "selected": [],
+  "startedAt": "2026-10-31T09:16:11.324Z",
+  "finishedAt": "2026-10-31T09:16:31.168Z"
+}

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
+import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -53,6 +56,10 @@ class CliReviewer:
     timeout_seconds: float = 20 * 60
     repo_dir_of: Callable[[str], Path] = repo_dir
     extra_args: tuple[str, ...] = ()
+    # Each worker thread starts its key rotation at a different key, so parallel
+    # workers spread over the keys instead of all exhausting the first one.
+    _slots: dict[int, int] = field(default_factory=dict, repr=False)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def command(self, item: ReviewInput, arm: Arm, run_index: int, out: Path) -> list[str]:
         caches = cache_root() / "eval"
@@ -91,7 +98,12 @@ class CliReviewer:
             cmd += ["--fake-llm", str(self.fake_llm)]
         return cmd
 
+    def key_offset(self) -> int:
+        with self._lock:
+            return self._slots.setdefault(threading.get_ident(), len(self._slots))
+
     def review(self, item: ReviewInput, arm: Arm, run_index: int, out: Path) -> None:
+        env = {**os.environ, "GEMINI_KEY_OFFSET": str(self.key_offset())}
         proc = subprocess.run(
             self.command(item, arm, run_index, out),
             capture_output=True,
@@ -100,6 +112,7 @@ class CliReviewer:
             errors="replace",
             timeout=self.timeout_seconds,
             cwd=REPO_ROOT,
+            env=env,
         )
         if proc.returncode == 0:
             return
@@ -108,6 +121,15 @@ class CliReviewer:
         if proc.returncode == EXIT_TRANSIENT:
             raise QuotaExhausted(detail)
         raise ReviewFailed(detail or f"exit code {proc.returncode}")
+
+
+# "next available in 47 s": a per-minute limit, worth waiting for; a daily quota says hours.
+_RETRY_AFTER = re.compile(r"next available in (\d+) s")
+
+
+def retry_after_seconds(error: QuotaExhausted) -> int | None:
+    match = _RETRY_AFTER.search(str(error))
+    return int(match.group(1)) if match else None
 
 
 def result_path(results: Path, arm: Arm, run_index: int, item: ReviewInput) -> Path:
@@ -137,6 +159,8 @@ def run_experiment(
     retry_failed: bool = True,
     limit: int | None = None,
     log: Callable[[str], None] = print,
+    max_quota_wait_s: float = 300,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> RunSummary:
     """Run every (arm, run, input) that has no result yet.
 
@@ -147,6 +171,9 @@ def run_experiment(
     Work is ordered run by run, input by input, arm by arm: if the experiment stops early,
     the inputs done so far are complete across all arms, which is what paired comparisons
     need.
+
+    A rate limit that clears within `max_quota_wait_s` (a per-minute limit) is waited out
+    and the review retried; a longer one (a daily quota) stops the run.
     """
     summary = RunSummary()
     jobs: list[tuple[Arm, int, ReviewInput, Path]] = []
@@ -169,7 +196,16 @@ def run_experiment(
         arm, run_index, item, out = job
         out.parent.mkdir(parents=True, exist_ok=True)
         tmp = out.with_suffix(".tmp")
-        reviewer.review(item, arm, run_index, tmp)
+        for attempt in range(1, 7):
+            try:
+                reviewer.review(item, arm, run_index, tmp)
+                break
+            except QuotaExhausted as error:
+                wait = retry_after_seconds(error)
+                if wait is None or wait > max_quota_wait_s or attempt == 6:
+                    raise
+                log(f"wait   {arm.id} run{run_index} {item.repo}: rate-limited for {wait} s")
+                sleep(wait + 5)
         json.loads(tmp.read_text(encoding="utf-8"))  # refuse to keep a truncated result
         out.with_suffix(".error.json").unlink(missing_ok=True)
         tmp.replace(out)

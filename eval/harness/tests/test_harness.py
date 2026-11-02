@@ -200,8 +200,8 @@ def test_spec_rejects_bad_definitions(tmp_path: Path) -> None:
         write_spec(tmp_path, "arms:\n  - {id: A, strategy: S0}\n  - {id: A, strategy: S1}\n")
     with pytest.raises(spec.SpecError, match="baseline"):
         write_spec(tmp_path, "baseline: Z\narms:\n  - {id: A, strategy: S0}\n")
-    pending = write_spec(tmp_path, "requires: [verifier]\narms:\n  - {id: A, strategy: S0}\n")
-    assert pending.unavailable() == ["verifier"]
+    pending = write_spec(tmp_path, "requires: [time-travel]\narms:\n  - {id: A, strategy: S0}\n")
+    assert pending.unavailable() == ["time-travel"]
 
 
 def test_select_cases_samples_inputs_round_robin_and_keeps_all_their_cases(tmp_path: Path) -> None:
@@ -277,6 +277,99 @@ def test_runner_stops_on_quota_and_orders_work_by_input(tmp_path: Path) -> None:
     ]
     assert summary.completed == 2 and summary.failed == 0
     assert len(reviewer.calls) == 3
+
+
+def test_runner_waits_out_short_rate_limits_but_stops_on_daily_quota(tmp_path: Path) -> None:
+    experiment = write_spec(tmp_path, TWO_ARMS)
+    inputs, _ = spec.select_cases([case("c1")], experiment)
+    first = f"A/run1/{inputs[0].key}"
+    waits: list[float] = []
+
+    class FlakyReviewer(ScriptedReviewer):
+        failures = 2
+
+        def review(self, item: Any, arm: Any, run_index: int, out: Path) -> None:
+            if f"{arm.id}/run{run_index}/{item.key}" == first and self.failures > 0:
+                self.failures -= 1
+                raise QuotaExhausted(
+                    "all 1 Gemini API keys are rate-limited; next available in 40 s"
+                )
+            super().review(item, arm, run_index, out)
+
+    summary = run_experiment(
+        experiment,
+        inputs,
+        tmp_path / "r",
+        FlakyReviewer({}),
+        log=lambda _l: None,
+        sleep=waits.append,
+    )
+    assert waits == [45, 45]
+    assert summary.completed == 4 and not summary.stopped_for_quota
+
+    daily = ScriptedReviewer(
+        {first: QuotaExhausted("all 1 Gemini API keys are rate-limited; next available in 60631 s")}
+    )
+    stopped = run_experiment(
+        experiment, inputs, tmp_path / "r2", daily, log=lambda _l: None, sleep=waits.append
+    )
+    assert stopped.stopped_for_quota and waits == [45, 45]
+
+
+def test_plan_counts_shared_review_calls_and_verifier_passes(tmp_path: Path) -> None:
+    from rlharness import plan
+    from rlharness.runner import result_path
+
+    experiment = write_spec(
+        tmp_path,
+        "runs: 2\narms:\n"
+        "  - {id: off, strategy: S4, config: {verifierPasses: 0}}\n"
+        "  - {id: on, strategy: S4, config: {verifierPasses: 3}}\n"
+        "  - {id: s2, strategy: S2}\n",
+    )
+    inputs, _ = spec.select_cases([case("c1"), case("c2")], experiment)
+    results = tmp_path / "r"
+    done = result_path(results, experiment.arms[0], 1, inputs[0])
+    done.parent.mkdir(parents=True)
+    done.write_text("{}", encoding="utf-8")
+
+    made = plan.make_plan(experiment, inputs, results, keys=2, daily_per_key=10)
+    assert (made.reviews_total, made.reviews_done, made.reviews_remaining) == (12, 1, 11)
+    # off and on share one S4 request per (run, input): 4, minus nothing (on is not done);
+    # S2 is a separate request: 4 more.
+    assert made.review_calls == 8
+    assert made.verifier_calls == 3 * 4
+    assert made.s2_reviews == 4
+    assert made.days == 20 / 20
+    text = made.to_text("E")
+    assert "11 remaining" in text and "keys needed to finish in one day: 2" in text
+
+
+def test_plan_counts_keys_without_reading_them_out(tmp_path: Path) -> None:
+    from rlharness import plan
+
+    env = tmp_path / ".env"
+    env.write_text("OTHER=1\nGEMINI_API_KEYS=aaa, bbb ,ccc\n", encoding="utf-8")
+    assert plan.count_keys(env, {}) == 3
+    assert plan.count_keys(env, {"GEMINI_API_KEYS": "x"}) == 1
+    assert plan.count_keys(tmp_path / "missing", {}) == 0
+
+
+def test_cli_reviewer_gives_each_worker_its_own_starting_key() -> None:
+    import threading
+
+    reviewer = CliReviewer(cli=Path("cli.js"))
+    seen: list[int] = []
+    threads = [
+        threading.Thread(target=lambda: seen.append(reviewer.key_offset())) for _ in range(3)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sorted(seen) == [0, 1, 2]
+    assert reviewer.key_offset() == 3  # the main thread is a fourth worker
+    assert reviewer.key_offset() == 3  # and keeps its slot
 
 
 def test_runner_respects_limit(tmp_path: Path) -> None:
@@ -458,3 +551,90 @@ def test_filter_experiments_refuse_training_repositories_and_model_changes(tmp_p
     with pytest.raises(filtercheck.FilterCheckError, match="does not say"):
         filtercheck.check_filter({**health, "train_repos": []}, inputs, tmp_path / "c")
     assert not (tmp_path / "b").exists()
+
+
+def test_paper_reads_every_number_from_files_and_marks_missing_experiments(tmp_path: Path) -> None:
+    from rlharness import paper
+
+    manifest = {
+        "cases_hash": "abc",
+        "generator": {
+            "szz_method": "szz-blame-v1",
+            "config": {
+                "max_cases_per_repo": 60,
+                "max_fix_changed_lines": 120,
+                "min_blame_share": 0.6,
+            },
+        },
+        "repos": [
+            {
+                "full_name": "o/a",
+                "language": "TypeScript",
+                "scanned_commits": 10,
+                "fix_commits": 3,
+                "cases": 2,
+            }
+        ],
+        "cases": [
+            {"input_key": "o/a@1", "fix": {"signal": "fix_keyword"}, "stats": {"days_to_fix": 4.0}},
+            {
+                "input_key": "o/a@2",
+                "fix": {"signal": "explicit_fix_type"},
+                "stats": {"days_to_fix": 10.0},
+            },
+        ],
+    }
+    results = tmp_path / "results"
+    summary_dir = results / "E1" / "h1"
+    summary_dir.mkdir(parents=True)
+    metric = {"mean": 0.25, "ci95": [0.1, 0.4], "run_sd": 0.0, "per_run": [0.25]}
+    (summary_dir / "summary.json").write_text(
+        json.dumps(
+            {
+                "description": "strategies",
+                "scored_at": "2026-10-31T00:00:00Z",
+                "k": [1, 10],
+                "runs": 3,
+                "line_tolerance": 3,
+                "inputs_selected": 40,
+                "cases_complete_in_all_arms": 45,
+                "baseline": "S0",
+                "arms": [
+                    {
+                        "arm": "S0",
+                        "recall_at": {"1": metric, "10": metric},
+                        "file_recall_at_max_k": 0.5,
+                        "comments_per_review": 2.5,
+                        "ground_truth_precision": 0.1,
+                        "tokens_in": 5000,
+                        "latency_s_p50": 20.0,
+                    }
+                ],
+                "comparisons": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    template = (
+        "{{benchmark.cases}} cases, median {{benchmark.median_days_to_fix}} days\n"
+        "{{table benchmark.repos}}\n{{experiment E1}}\n{{experiment E9}}\n{{filter}}\n{{provenance}}\n"
+    )
+    out = paper.render(
+        template,
+        manifest,
+        results=results,
+        verdicts=tmp_path / "none.jsonl",
+        filter_reports=tmp_path / "none",
+    )
+    assert out.startswith("2 cases, median 7 days")
+    assert "| `o/a` | TypeScript | 10 | 3 | 2 |" in out
+    assert (
+        "| S0 (baseline) | 25.0% | 25.0% [10.0%, 40.0%] | 50.0% | 2.50 | 10.0% | 5,000 | 20 s |"
+        in out
+    )
+    assert "Small sample" not in out  # 45 cases
+    assert "**Not yet run.** No scored results for `E9`" in out
+    assert "**Not yet trained.**" in out
+    assert "results/E1/h1/summary.json" in out.replace("\\", "/")
+    with pytest.raises(ValueError, match="unknown template directive"):
+        paper.render("{{nonsense.value}}", manifest, results=results, verdicts=tmp_path / "x")

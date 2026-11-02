@@ -24,6 +24,7 @@ describe('parsePolicy', () => {
     const { policy, errors } = parsePolicy(
       [
         'enabled: true',
+        'review_drafts: true',
         'max_comments: 3',
         'min_severity: medium',
         'categories: [bug, security]',
@@ -35,6 +36,7 @@ describe('parsePolicy', () => {
     expect(errors).toEqual([]);
     expect(policy).toEqual({
       enabled: true,
+      reviewDrafts: true,
       maxComments: 3,
       minSeverity: 'medium',
       categories: ['bug', 'security'],
