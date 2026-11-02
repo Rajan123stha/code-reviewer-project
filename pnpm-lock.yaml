@@ -186,6 +186,9 @@ importers:
       '@reviewlens/review-core':
         specifier: workspace:*
         version: link:../review-core
+      '@reviewlens/shared':
+        specifier: workspace:*
+        version: link:../shared
       pg:
         specifier: ^8.23.1
         version: 8.23.1
