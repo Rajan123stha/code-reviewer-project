@@ -7,3 +7,6 @@
 .env.*
 *.pem
 eval/results
+*.key
+*.p12
+*.pfx

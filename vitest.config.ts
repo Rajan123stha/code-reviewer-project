@@ -9,7 +9,7 @@ export default defineConfig({
     alias: [{ find: /^@reviewlens\/([^/]+)$/, replacement: `${root}packages/$1/src/index.ts` }],
   },
   test: {
-    include: ['{apps,packages}/*/src/**/*.test.ts'],
+    include: ['{apps,packages}/*/src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     environment: 'node',
   },
 });

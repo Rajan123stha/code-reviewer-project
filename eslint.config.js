@@ -23,6 +23,7 @@ export default tseslint.config(
           allowDefaultProject: [
             'eslint.config.js',
             'vitest.config.ts',
+            'scripts/*.mjs',
             'packages/db/prisma.config.ts',
           ],
         },
@@ -36,5 +37,12 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'off',
     },
   },
-  { files: ['**/*.js', 'packages/db/prisma.config.ts'], ...tseslint.configs.disableTypeChecked },
+  {
+    files: ['**/*.js', '**/*.mjs', 'packages/db/prisma.config.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly', URL: 'readonly' } },
+  },
 );

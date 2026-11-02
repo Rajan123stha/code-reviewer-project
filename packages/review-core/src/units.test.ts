@@ -123,7 +123,7 @@ describe('scrubSecrets', () => {
   it.each([
     ['ghp_' + 'a'.repeat(36), 'github-token'],
     ['sk-ant-api03-' + 'x'.repeat(30), 'anthropic-key'],
-    ['xoxb-1234567890-abcdef', 'slack-token'],
+    ['xoxb-1234567890-abcdef', 'slack-token'], // gitleaks:allow: synthetic fixture
     ['AIza' + 'b'.repeat(35), 'google-api-key'],
   ])('redacts %s', (secret, name) => {
     const out = scrubSecrets(`const t = "${secret}";`);
@@ -140,13 +140,13 @@ describe('scrubSecrets', () => {
   });
 
   it('redacts URL passwords', () => {
-    expect(scrubSecrets('postgres://admin:s3cretpw@db:5432/x').text).toBe(
-      'postgres://admin:[REDACTED:url-credentials]@db:5432/x',
+    expect(scrubSecrets('postgres://admin:' + 's3cretpw' + '@db:5432/x').text).toBe(
+      'postgres://admin:[REDACTED:url-credentials]@db:5432/x', // gitleaks:allow: synthetic fixture
     );
   });
 
   it('blanks private keys without changing the line count', () => {
-    const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIabc\nDEFghi\n-----END RSA PRIVATE KEY-----';
+    const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIabc\nDEFghi\n-----END RSA PRIVATE KEY-----'; // gitleaks:allow: synthetic fixture
     const out = scrubSecrets(`a\n${pem}\nb`);
     expect(out.text.split('\n')).toHaveLength(`a\n${pem}\nb`.split('\n').length);
     expect(out.text).not.toContain('MIIabc');

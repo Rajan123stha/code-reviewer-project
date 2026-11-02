@@ -7,6 +7,9 @@ const client = fileURLToPath(new URL('./src/client', import.meta.url));
 export default defineConfig({
   root: client,
   base: './',
+  // The client needs no configuration: never load .env files into the bundle, so no
+  // VITE_-prefixed (or any other) variable can leak into code shipped to browsers.
+  envDir: false,
   oxc: { jsx: { runtime: 'automatic' } },
   build: {
     outDir: fileURLToPath(new URL('./dist/client', import.meta.url)),

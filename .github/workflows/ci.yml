@@ -31,6 +31,9 @@ jobs:
       # Build resolves workspace packages through their emitted .d.ts (not sources),
       # so it can catch type errors that typecheck does not.
       - run: pnpm build
+      # Nothing server-side may end up in code shipped to browsers.
+      - name: Client bundle holds no secrets or server-only settings
+        run: node scripts/secret-scan.mjs --paths apps/dashboard/dist/client --deny-names
 
   benchmark:
     runs-on: ubuntu-latest
@@ -47,6 +50,21 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: mypy
       - run: pytest -q
+
+  # Secrets in any commit on any branch, with gitleaks' default rules. Findings are redacted.
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: >-
+          docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:v8.21.2
+          detect --source /repo --redact --verbose --exit-code 1
+      - name: Repository scanner (tracked files and history)
+        run: node scripts/secret-scan.mjs && node scripts/secret-scan.mjs --history
 
   # The deployable images build from a clean checkout. Not pushed anywhere.
   images:
