@@ -1,0 +1,14 @@
+# gitleaks configuration (CI job "secrets"): the default rules, plus reviewed exceptions.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic fixtures of the secret scrubbers' tests; the former local Docker default password"
+paths = [
+  '''packages/review-core/src/units\.test\.ts''',
+  '''packages/shared/src/redact\.test\.ts''',
+  '''scripts/secret-scan\.test\.mjs''',
+]
+regexes = [
+  '''reviewlens:reviewlens@''',
+]

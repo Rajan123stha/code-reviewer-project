@@ -33,6 +33,9 @@ found: `.env` has never been committed, and the only matches were synthetic test
 6. **Scanning in CI**: gitleaks over the full history (redacted output), and
    `scripts/secret-scan.mjs` over tracked files and history. The script never prints a matched
    value; synthetic fixtures are marked `gitleaks:allow`.
+7. **History is not rewritten.** Matches in old commits that were reviewed and are not
+   secrets (scrubber test fixtures, the former local-only Docker default password) are listed
+   in `.secret-scan-allow` and `.gitleaks.toml`, one reviewed entry at a time.
 
 ## Known limits
 

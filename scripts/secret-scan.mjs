@@ -72,7 +72,8 @@ export function scanText(text, envSecrets = [], denyNames = []) {
       for (const m of line.matchAll(rule.re)) {
         if (rule.id === 'url-credentials' && PLACEHOLDER_PASSWORDS.has(m[1].toLowerCase()))
           continue;
-        if (rule.id === 'url-credentials' && /^\$\{|^<|^\*+$/.test(m[1])) continue;
+        // Interpolations (${VAR}), <placeholders>, [redacted] markers and masks.
+        if (rule.id === 'url-credentials' && /^\$\{|^<|^\[|^\*+$/.test(m[1])) continue;
         findings.push({ rule: rule.id, line: i + 1, length: m[0].length });
       }
     }
@@ -165,8 +166,25 @@ function scanHistory(envSecrets) {
   return findings;
 }
 
+/**
+ * Reviewed findings that are not secrets (for example a local-only default password in an
+ * old commit). One "rule<TAB>location" per line, exactly as this script prints them.
+ */
+function readAllowlist(root) {
+  try {
+    return new Set(
+      readFileSync(join(root, '.secret-scan-allow'), 'utf8')
+        .split(/\r?\n/)
+        .filter((l) => l.trim() && !l.startsWith('#')),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 function main(argv) {
   const root = process.cwd();
+  const allow = readAllowlist(root);
   const envIndex = argv.indexOf('--env');
   const envSecrets = envIndex >= 0 ? readEnvSecrets(argv[envIndex + 1]) : [];
   let findings;
@@ -199,11 +217,15 @@ function main(argv) {
       root,
     );
   }
+  const before = findings.length;
+  findings = findings.filter((f) => !allow.has(`${f.rule}\t${f.where}`));
+  const allowed = before - findings.length;
   const extra = envSecrets.length
     ? `, plus ${envSecrets.length} exact value(s) from the env file`
     : '';
+  const note = allowed ? ` (${allowed} reviewed and allowlisted in .secret-scan-allow)` : '';
   for (const f of findings) console.log(`${f.rule}\t${f.where}\t(match length ${f.length})`);
-  console.log(`secret-scan: ${findings.length} finding(s) in ${scope}${extra}`);
+  console.log(`secret-scan: ${findings.length} finding(s) in ${scope}${extra}${note}`);
   return findings.length ? 1 : 0;
 }
 
