@@ -1,3 +1,4 @@
+import { codeFence, inertMarkdown } from './prompt-safety.js';
 import type { ModelComment } from './schema.js';
 
 const CATEGORY_LABEL: Record<ModelComment['category'], string> = {
@@ -17,17 +18,22 @@ const CATEGORY_LABEL: Record<ModelComment['category'], string> = {
  */
 export const FEEDBACK_HINT = '<sub>Was this useful? React with 👍 or 👎 to tell Reviewlens.</sub>';
 
-/** Markdown body of one inline review comment. */
+/**
+ * Markdown body of one inline review comment. Model text is untrusted: prose is made inert
+ * (no mentions, images, links or HTML) and quoted code goes in a fence it cannot close.
+ */
 export function formatCommentBody(comment: ModelComment): string {
   const parts = [
-    `**${CATEGORY_LABEL[comment.category]} (${comment.severity})**: ${comment.claim.trim()}`,
+    `**${CATEGORY_LABEL[comment.category]} (${comment.severity})**: ${inertMarkdown(comment.claim.trim())}`,
   ];
   const evidence = comment.evidence.trim();
   if (evidence) {
-    parts.push(evidence.includes('\n') ? fence(evidence) : `> \`${evidence.replace(/`/g, "'")}\``);
+    parts.push(
+      evidence.includes('\n') ? codeFence(evidence) : `> \`${evidence.replace(/`/g, "'")}\``,
+    );
   }
   if (comment.suggested_fix?.trim())
-    parts.push(`**Suggested fix:** ${comment.suggested_fix.trim()}`);
+    parts.push(`**Suggested fix:** ${inertMarkdown(comment.suggested_fix.trim())}`);
   parts.push(FEEDBACK_HINT);
   return parts.join('\n\n');
 }
@@ -41,9 +47,4 @@ export function formatReviewBody(
       ? 'Reviewlens found no issues to flag in this change.'
       : `Reviewlens left ${posted} comment${posted === 1 ? '' : 's'}.`;
   return `${summary}\n\n<sub>strategy ${meta.strategy} · model ${meta.model}</sub>`;
-}
-
-function fence(code: string) {
-  const ticks = code.includes('```') ? '````' : '```';
-  return `${ticks}\n${code}\n${ticks}`;
 }

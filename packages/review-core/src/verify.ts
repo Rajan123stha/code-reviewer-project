@@ -1,6 +1,7 @@
 import type { Effort, LLMClient } from '@reviewlens/llm';
 import { z } from 'zod';
 import { loadPrompt, renderTemplate } from './prompts.js';
+import { neutralizePromptTags } from './prompt-safety.js';
 import type { ModelComment } from './schema.js';
 
 export const VERIFY_VERDICTS = ['upheld', 'refuted', 'uncertain'] as const;
@@ -64,17 +65,19 @@ export interface VerifyResult {
   calls: VerifyCall[];
 }
 
+/** Model-written comments are untrusted too: their text cannot close the comment tags. */
 function renderComments(comments: readonly ModelComment[]): string {
+  const safe = neutralizePromptTags;
   return comments
     .map((c, id) =>
       [
         `<comment id="${id}">`,
-        `file: ${c.file}`,
+        `file: ${safe(c.file)}`,
         `line: ${c.line}`,
         `category: ${c.category}`,
         `severity: ${c.severity}`,
-        `claim: ${c.claim}`,
-        `evidence: ${c.evidence}`,
+        `claim: ${safe(c.claim)}`,
+        `evidence: ${safe(c.evidence)}`,
         '</comment>',
       ].join('\n'),
     )

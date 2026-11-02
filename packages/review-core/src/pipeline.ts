@@ -13,6 +13,7 @@ import type { ReviewInput } from './input.js';
 import { DEFAULT_POLICY, PolicyMatcher, type RepoPolicy } from './policy.js';
 import { loadPrompt, renderTemplate } from './prompts.js';
 import { REVIEW_SCHEMA_NAME, reviewOutputSchema, type ModelComment } from './schema.js';
+import { neutralizePromptTags, truncate } from './prompt-safety.js';
 import { scrubSecrets } from './scrub.js';
 import { DiffIndex, normalizePath, type RejectReason } from './validate.js';
 import { verifyComments, type VerifyCall, type VerifyVerdict } from './verify.js';
@@ -107,6 +108,10 @@ export interface ReviewDeps {
   scorer?: CommentScorer | undefined;
 }
 
+/** Pull request title and description beyond these lengths are cut before prompting. */
+export const MAX_TITLE_CHARS = 300;
+export const MAX_BODY_CHARS = 6_000;
+
 /**
  * The review pipeline: a function of (input, config) and the LLM's answer. Production
  * workers and the eval harness both call exactly this.
@@ -127,11 +132,14 @@ export async function runReview(
     );
   }
   const redactions: Record<string, number> = {};
+  // Every piece of untrusted text passes through here before it can reach a prompt:
+  // secrets are removed, and the tags prompts use to mark data are neutralized, so the
+  // text cannot close its block and pose as instructions.
   const scrub = (text: string) => {
     const result = scrubSecrets(text);
     for (const [k, n] of Object.entries(result.redactions))
       redactions[k] = (redactions[k] ?? 0) + n;
-    return result.text;
+    return neutralizePromptTags(result.text);
   };
 
   // 1. Ingest: scrub first, so nothing downstream (prompt, validation, storage) sees secrets.
@@ -193,8 +201,9 @@ export async function runReview(
   }
 
   // 3. Generate candidates.
-  const title = scrub(input.pr.title);
-  const description = scrub(input.pr.body?.trim() || '(no description)');
+  // The author controls these; their size must not decide the prompt's size.
+  const title = scrub(truncate(input.pr.title, MAX_TITLE_CHARS));
+  const description = scrub(truncate(input.pr.body?.trim() || '(no description)', MAX_BODY_CHARS));
   const contextText = context.sections.map((s) => s.text).join('\n\n');
   const user = renderTemplate(prompt.user, {
     title,

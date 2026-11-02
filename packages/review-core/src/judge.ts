@@ -1,6 +1,7 @@
 import type { Effort, LLMClient } from '@reviewlens/llm';
 import { z } from 'zod';
 import { loadPrompt, renderTemplate } from './prompts.js';
+import { neutralizePromptTags } from './prompt-safety.js';
 import { scrubSecrets } from './scrub.js';
 
 export const JUDGE_VERDICTS = ['valid', 'nitpick', 'invalid'] as const;
@@ -59,7 +60,7 @@ export async function judgeComment(
   llm: LLMClient,
 ): Promise<JudgeResult> {
   const prompt = await loadPrompt(config.promptVersion ?? 'judge/v1');
-  const scrub = (text: string) => scrubSecrets(text).text;
+  const scrub = (text: string) => neutralizePromptTags(scrubSecrets(text).text);
   const user = renderTemplate(prompt.user, {
     path: item.path,
     diff: scrub(item.diff),
@@ -142,7 +143,7 @@ export async function judgeMatch(
   llm: LLMClient,
 ): Promise<MatchResult> {
   const prompt = await loadPrompt(config.promptVersion ?? 'match/v1');
-  const scrub = (text: string) => scrubSecrets(text).text;
+  const scrub = (text: string) => neutralizePromptTags(scrubSecrets(text).text);
   const user = renderTemplate(prompt.user, {
     fix_subject: scrub(item.fix_subject),
     path: item.path,
