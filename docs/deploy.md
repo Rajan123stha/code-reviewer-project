@@ -21,7 +21,8 @@ GitHub ──HTTPS──▶ reverse proxy (TLS) ──▶ api :3000 ──▶ Re
 
 ## Steps
 
-1. **Configure.** Copy `.env.example` to `.env` and fill in at least `GITHUB_APP_ID`,
+1. **Configure.** Copy `.env.example` to `.env` (never commit it) and fill in at least
+   `POSTGRES_PASSWORD` (a random string), `GITHUB_APP_ID`,
    `GITHUB_WEBHOOK_SECRET`, `GEMINI_API_KEYS` and `DASHBOARD_PASSWORD` (12+ characters).
    Save the App's private key as `reviewlens.private-key.pem` in the repository root.
    For a managed Postgres, set `DATABASE_URL` and remove the `DATABASE_URL` lines from the
@@ -35,7 +36,7 @@ GitHub ──HTTPS──▶ reverse proxy (TLS) ──▶ api :3000 ──▶ Re
 3. **Start the stack:**
 
    ```sh
-   docker compose -f infra/docker-compose.yml --profile app up -d --build
+   docker compose --env-file .env -f infra/docker-compose.yml --profile app up -d --build
    ```
 
    With a trained filter model (`services/filter/models/current.json`), add
@@ -68,6 +69,22 @@ GitHub ──HTTPS──▶ reverse proxy (TLS) ──▶ api :3000 ──▶ Re
   `docker compose ... up -d --build`. Migrations are additive.
 - **Backups.** Back up Postgres. Redis holds only queued jobs; losing it loses at most
   reviews that had not started.
+
+## Secrets
+
+- Secrets live only in `.env` on the host (or your platform's secret store), never in the
+  repository, images or client code. `.env`, `.env.*` and key files are gitignored, and the
+  Docker build context excludes them.
+- Each service validates its settings at startup and exits naming the missing or malformed
+  variable, without printing its value. The dashboard refuses to listen beyond loopback without
+  a 12+ character `DASHBOARD_PASSWORD`.
+- Logs redact secret fields and secret-shaped strings (keys, tokens, URL passwords), including
+  inside error messages; failed-review messages stored in the database are redacted the same way.
+- The dashboard client is built without any environment variables, and CI fails if a
+  server-only variable name or a secret pattern appears in the bundle. CI also runs gitleaks
+  over the full git history.
+- To rotate: change the value at the provider (GitHub App settings, Google AI Studio, Neon),
+  update `.env`, restart the containers. The webhook secret must match on both sides.
 
 ## Not covered
 

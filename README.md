@@ -165,14 +165,14 @@ review from the app with inline comments. In the app
 settings, **Advanced → Recent Deliveries** shows each webhook and lets you redeliver it.
 
 To run everything in containers, use
-`docker compose -f infra/docker-compose.yml --profile app up --build`.
+`docker compose --env-file .env -f infra/docker-compose.yml --profile app up --build`.
 
 ### Tracing
 
 Tracing is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. To view traces locally:
 
 ```sh
-docker compose -f infra/docker-compose.yml --profile tracing up -d
+docker compose --env-file .env -f infra/docker-compose.yml --profile tracing up -d
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 pnpm dev:api
 ```
 
