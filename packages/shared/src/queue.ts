@@ -78,7 +78,16 @@ export const feedbackJobSchema = z.discriminatedUnion('kind', [
     /** GitHub ids of the review comments in the resolved thread. */
     commentIds: z.array(z.number().int().positive()).min(1),
   }),
-  z.object({ ...feedbackBase, kind: z.literal('closed'), merged: z.boolean() }),
+  z.object({
+    ...feedbackBase,
+    kind: z.literal('closed'),
+    merged: z.boolean(),
+    /** The PR author: the only person whose reactions count as feedback. */
+    authorLogin: z
+      .string()
+      .regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?$/)
+      .optional(),
+  }),
 ]);
 
 export type FeedbackJobData = z.infer<typeof feedbackJobSchema>;

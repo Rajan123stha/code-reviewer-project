@@ -35,6 +35,7 @@ const pullRequestEventSchema = z.object({
     head: z.object({ sha }),
     base: z.object({ sha }),
     merged: z.boolean().nullish(),
+    user: z.object({ login: z.string().max(64) }).nullish(),
   }),
 });
 
@@ -176,6 +177,9 @@ export const webhookRoutes: FastifyPluginAsync<WebhookOptions> = async (app, opt
         ...target,
         kind: 'closed',
         merged: pr.merged ?? false,
+        ...(pr.user && login.safeParse(pr.user.login).success
+          ? { authorLogin: pr.user.login }
+          : {}),
       });
       return reply.code(202).send({ status: 'queued', jobId });
     }

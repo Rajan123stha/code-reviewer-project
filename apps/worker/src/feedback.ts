@@ -113,13 +113,17 @@ async function recordClose(
   for (const comment of comments.slice(-MAX_COMMENTS_PER_CLOSE)) {
     let reacted = false;
     if (comment.githubCommentId !== null) {
-      const reactions = await fetchCommentReactions(client, repo, comment.githubCommentId).catch(
-        (error: unknown) => {
-          // A deleted comment has no reactions to read.
-          if ((error as { status?: number }).status === 404) return null;
-          throw error;
-        },
-      );
+      const author = job.kind === 'closed' ? job.authorLogin : undefined;
+      const reactions = await fetchCommentReactions(
+        client,
+        repo,
+        comment.githubCommentId,
+        author,
+      ).catch((error: unknown) => {
+        // A deleted comment has no reactions to read.
+        if ((error as { status?: number }).status === 404) return null;
+        throw error;
+      });
       if (reactions && reactions.thumbsUp > 0) {
         await deps.store.addFeedback(comment.id, 'thumbs_up', 'reactions', {
           count: reactions.thumbsUp,

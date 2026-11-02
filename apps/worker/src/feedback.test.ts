@@ -46,7 +46,7 @@ function setup(
   comments: PostedComment[],
   github: {
     status?: string;
-    reactions?: Record<number, { content: string; user: { type: string } }[]>;
+    reactions?: Record<number, { content: string; user: { type: string; login: string } }[]>;
   } = {},
 ) {
   const recorded: [number, FeedbackOutcome, string][] = [];
@@ -136,18 +136,21 @@ describe('processFeedbackJob', () => {
       {
         reactions: {
           1001: [
-            { content: '+1', user: { type: 'User' } },
-            { content: '+1', user: { type: 'Bot' } },
-            { content: 'heart', user: { type: 'User' } },
+            { content: '+1', user: { type: 'User', login: 'author' } },
+            { content: '+1', user: { type: 'Bot', login: 'author' } },
+            { content: 'heart', user: { type: 'User', login: 'author' } },
           ],
-          1002: [{ content: '-1', user: { type: 'User' } }],
-          1003: [{ content: '+1', user: { type: 'Bot' } }],
+          1002: [{ content: '-1', user: { type: 'User', login: 'author' } }],
+          1003: [{ content: '+1', user: { type: 'Bot', login: 'some-bot' } }],
           // 1004 was deleted on GitHub: the reactions request returns 404.
         },
       },
     );
 
-    const result = await processFeedbackJob({ ...base, kind: 'closed', merged: true }, t.deps);
+    const result = await processFeedbackJob(
+      { ...base, kind: 'closed', merged: true, authorLogin: 'author' },
+      t.deps,
+    );
 
     expect(t.recorded).toEqual([
       [1, 'thumbs_up', 'reactions'],
@@ -160,6 +163,29 @@ describe('processFeedbackJob', () => {
       { githubRepoId: 8, pullNumber: 4 },
       'merged',
     );
+  });
+
+  it('counts only reactions by the PR author, so strangers cannot poison the labels', async () => {
+    // On a public repository anyone can react. Feedback becomes filter training data, so a
+    // drive-by account mass-reacting must not decide which comments count as useful.
+    const t = setup([comment(1, 8), comment(2, 9)], {
+      reactions: {
+        1001: [
+          { content: '-1', user: { type: 'User', login: 'drive-by' } },
+          { content: '-1', user: { type: 'User', login: 'another-stranger' } },
+          { content: '+1', user: { type: 'User', login: 'Author' } },
+        ],
+        1002: [{ content: '+1', user: { type: 'User', login: 'drive-by' } }],
+      },
+    });
+    await processFeedbackJob(
+      { ...base, kind: 'closed', merged: true, authorLogin: 'author' },
+      t.deps,
+    );
+    expect(t.recorded).toEqual([
+      [1, 'thumbs_up', 'reactions'],
+      [2, 'ignored', 'close'],
+    ]);
   });
 
   it('records the close of a pull request that has no posted comments', async () => {

@@ -120,6 +120,24 @@ describe('POST /webhooks/github', () => {
     },
   );
 
+  it.each([
+    ['octo-dev', 'octo-dev'],
+    ['not a login; DROP', undefined],
+  ])(
+    'passes the PR author on close so only their reactions count (login %s)',
+    async (login, expected) => {
+      const payload = pullRequestPayload('closed');
+      await send('pull_request', {
+        ...payload,
+        pull_request: { ...payload.pull_request, merged: true, user: { login } },
+      });
+      expect(enqueueFeedback.mock.calls[0]![0]).toMatchObject({ kind: 'closed' });
+      expect((enqueueFeedback.mock.calls[0]![0] as { authorLogin?: string }).authorLogin).toBe(
+        expected,
+      );
+    },
+  );
+
   it('queues feedback when a review thread is resolved, and ignores unresolved', async () => {
     const payload = {
       action: 'resolved',

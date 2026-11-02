@@ -55,17 +55,27 @@ export interface ReactionCounts {
   thumbsDown: number;
 }
 
-/** +1 and -1 reactions left by people (not bots) on a review comment. */
+/**
+ * +1 and -1 reactions on a review comment, counting only the given user (the pull request's
+ * author, whom the comment addresses). Reactions become training labels for the filter; on a
+ * public repository anyone can react, so counting everyone would let strangers decide them.
+ * Without a user, nothing is counted.
+ */
 export async function fetchCommentReactions(
   client: GitHubClient,
   repo: Repo,
   commentId: number,
+  onlyFrom: string | undefined,
 ): Promise<ReactionCounts> {
+  if (!onlyFrom) return { thumbsUp: 0, thumbsDown: 0 };
   const { data } = await client.request(
     'GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions',
     { owner: repo.owner, repo: repo.repo, comment_id: commentId, per_page: 100 },
   );
-  const human = data.filter((r) => r.user?.type !== 'Bot');
+  const author = onlyFrom.toLowerCase();
+  const human = data.filter(
+    (r) => r.user?.type !== 'Bot' && r.user?.login?.toLowerCase() === author,
+  );
   return {
     thumbsUp: human.filter((r) => r.content === '+1').length,
     thumbsDown: human.filter((r) => r.content === '-1').length,
