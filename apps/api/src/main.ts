@@ -1,8 +1,6 @@
 import {
   createLogger,
-  logEnv,
   parseEnv,
-  redisEnv,
   FEEDBACK_QUEUE,
   INDEX_QUEUE,
   REVIEW_QUEUE,
@@ -10,19 +8,11 @@ import {
 } from '@reviewlens/shared';
 import { Queue } from 'bullmq';
 import { BullMQOtel } from 'bullmq-otel';
-import { z } from 'zod';
 import { buildApp } from './app.js';
+import { apiEnvSchema } from './env.js';
 import { createEnqueueFeedback, createEnqueueIndex, createEnqueueReview } from './queue.js';
 
-const env = parseEnv(
-  z.object({
-    ...redisEnv,
-    ...logEnv,
-    GITHUB_WEBHOOK_SECRET: z.string().min(1),
-    PORT: z.coerce.number().int().default(3000),
-    HOST: z.string().default('0.0.0.0'),
-  }),
-);
+const env = parseEnv(apiEnvSchema);
 
 const logger = createLogger('api', { level: env.LOG_LEVEL });
 const queue = new Queue(REVIEW_QUEUE, {
