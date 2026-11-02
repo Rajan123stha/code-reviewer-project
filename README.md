@@ -323,33 +323,38 @@ CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pu
 
 ## Configuration
 
-| Variable                                | Used by   | Default                  | Notes                                                        |
-| --------------------------------------- | --------- | ------------------------ | ------------------------------------------------------------ |
-| `GITHUB_WEBHOOK_SECRET`                 | api       | (required)               | Must match the App's webhook secret                          |
-| `GITHUB_APP_ID`                         | worker    | (required)               |                                                              |
-| `GITHUB_APP_PRIVATE_KEY_PATH`           | worker    |                          | Path to the `.pem` file                                      |
-| `GITHUB_APP_PRIVATE_KEY`                | worker    |                          | Inline key; `\n` escapes allowed; preferred over the path    |
-| `REDIS_URL`                             | both      | `redis://localhost:6379` |                                                              |
-| `PORT`, `HOST`                          | api       | `3000`, `0.0.0.0`        |                                                              |
-| `WORKER_CONCURRENCY`                    | worker    | `4`                      |                                                              |
-| `DATABASE_URL`                          | worker    | (required)               | Postgres connection string                                   |
-| `LLM_PROVIDER`                          | worker    | `gemini`                 | `gemini` or `anthropic`                                      |
-| `GEMINI_API_KEYS`                       | worker    | (required for gemini)    | Comma-separated; rotated when a key is rate-limited          |
-| `GEMINI_FREE_TIER`                      | worker    | `true`                   | Record cost as 0                                             |
-| `ANTHROPIC_API_KEY`                     | worker    | (required for anthropic) |                                                              |
-| `REVIEW_STRATEGY`                       | worker    | `S1`                     | `S0` to `S5` (see the table at the top)                      |
-| `INDEX_EMBEDDINGS`                      | worker    | `false`                  | Embed indexed symbols into pgvector on each push             |
-| `REVIEW_MODEL`                          | worker    | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                      |
-| `REVIEW_FALLBACK_MODELS`                | worker    | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded          |
-| `LLM_CACHE_DIR`                         | worker    | (unset)                  | On-disk LLM response cache                                   |
-| `FILTER_URL`                            | worker    | (unset)                  | Filter service base URL                                      |
-| `REVIEW_FILTER_THRESHOLD`               | worker    | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL` |
-| `MAX_REVIEWS_PER_REPO_PER_DAY`          | worker    | `100`                    | Reviews per repository in 24 hours; 0 = no limit             |
-| `MAX_COST_USD_PER_INSTALLATION_PER_DAY` | worker    | `0` (no limit)           | LLM cost per installation in 24 hours                        |
-| `MAX_PR_CHANGED_LINES`                  | worker    | `5000`                   | Larger pull requests are not reviewed; 0 = no limit          |
-| `DASHBOARD_HOST`                        | dashboard | `127.0.0.1`              | Any other address requires `DASHBOARD_PASSWORD`              |
-| `DASHBOARD_PORT`                        | dashboard | `4000`                   |                                                              |
-| `DASHBOARD_PASSWORD`                    | dashboard | (unset)                  | HTTP basic auth password, 12+ characters                     |
-| `MAX_PR_CHANGED_FILES`                  | worker    | `200`                    | Same, by number of files                                     |
-| `LOG_LEVEL`                             | both      | `info`                   |                                                              |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`           | both      | (unset, so tracing off)  | OTLP/HTTP base URL                                           |
+| Variable                                | Used by        | Default                  | Notes                                                            |
+| --------------------------------------- | -------------- | ------------------------ | ---------------------------------------------------------------- |
+| `GITHUB_WEBHOOK_SECRET`                 | api            | (required)               | Must match the App's webhook secret                              |
+| `GITHUB_APP_ID`                         | worker         | (required)               |                                                                  |
+| `GITHUB_APP_PRIVATE_KEY_PATH`           | worker         |                          | Path to the `.pem` file                                          |
+| `GITHUB_APP_PRIVATE_KEY`                | worker         |                          | Inline key; `\n` escapes allowed; preferred over the path        |
+| `REDIS_URL`                             | both           | `redis://localhost:6379` |                                                                  |
+| `PORT`, `HOST`                          | api            | `3000`, `0.0.0.0`        |                                                                  |
+| `WORKER_CONCURRENCY`                    | worker         | `4`                      |                                                                  |
+| `DATABASE_URL`                          | worker         | (required)               | Postgres connection string                                       |
+| `LLM_PROVIDER`                          | worker         | `gemini`                 | `gemini` or `anthropic`                                          |
+| `GEMINI_API_KEYS`                       | worker         | (required for gemini)    | Comma-separated; rotated when a key is rate-limited              |
+| `GEMINI_FREE_TIER`                      | worker         | `true`                   | Record cost as 0                                                 |
+| `ANTHROPIC_API_KEY`                     | worker         | (required for anthropic) |                                                                  |
+| `REVIEW_STRATEGY`                       | worker         | `S1`                     | `S0` to `S5` (see the table at the top)                          |
+| `INDEX_EMBEDDINGS`                      | worker         | `false`                  | Embed indexed symbols into pgvector on each push                 |
+| `REVIEW_MODEL`                          | worker         | provider default         | `gemini-3.8-flash` or `claude-opus-5-5`                          |
+| `REVIEW_FALLBACK_MODELS`                | worker         | `gemini-3.5-flash`       | Comma-separated; tried when the model is overloaded              |
+| `LLM_CACHE_DIR`                         | worker         | (unset)                  | On-disk LLM response cache                                       |
+| `FILTER_URL`                            | worker         | (unset)                  | Filter service base URL                                          |
+| `REVIEW_FILTER_THRESHOLD`               | worker         | (unset, so filter off)   | Drop comments scored below this (0 to 1); needs `FILTER_URL`     |
+| `MAX_REVIEWS_PER_REPO_PER_DAY`          | worker         | `100`                    | Reviews per repository in 24 hours; 0 = no limit                 |
+| `MAX_COST_USD_PER_INSTALLATION_PER_DAY` | worker         | `0` (no limit)           | LLM cost per installation in 24 hours                            |
+| `MAX_PR_CHANGED_LINES`                  | worker         | `5000`                   | Larger pull requests are not reviewed; 0 = no limit              |
+| `DASHBOARD_HOST`                        | dashboard      | `127.0.0.1`              | Any other address requires `DASHBOARD_PASSWORD`                  |
+| `DASHBOARD_PORT`                        | dashboard      | `4000`                   |                                                                  |
+| `DASHBOARD_PASSWORD`                    | dashboard      | (unset)                  | HTTP basic auth password, 12+ characters                         |
+| `MAX_PR_DIFF_BYTES`                     | worker         | `5000000`                | Diffs larger than this are not parsed or reviewed                |
+| `RATE_LIMIT_PER_MINUTE`                 | api            | `600`                    | Webhook requests per client address per minute                   |
+| `SIGNATURE_FAILURES_PER_10_MIN`         | api            | `20`                     | Bad signatures before a client is refused for the window         |
+| `TRUST_PROXY`                           | api, dashboard | (unset)                  | Reverse proxy addresses to trust for client IPs, e.g. `loopback` |
+| `DASHBOARD_ALLOWED_HOSTS`               | dashboard      | (unset)                  | Public host names of the dashboard, comma-separated              |
+| `MAX_PR_CHANGED_FILES`                  | worker         | `200`                    | Same, by number of files                                         |
+| `LOG_LEVEL`                             | both           | `info`                   |                                                                  |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`           | both           | (unset, so tracing off)  | OTLP/HTTP base URL                                               |

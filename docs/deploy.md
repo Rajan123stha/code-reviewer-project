@@ -54,6 +54,10 @@ GitHub ──HTTPS──▶ reverse proxy (TLS) ──▶ api :3000 ──▶ Re
    ```
 
    The dashboard asks for `DASHBOARD_PASSWORD` (HTTP basic auth, any user name).
+   Set `DASHBOARD_ALLOWED_HOSTS` to the public name (`reviews.example.com`): the dashboard
+   refuses requests addressed to any other host. Set `TRUST_PROXY` to the address the proxy
+   connects from (with containers, the Docker network range, for example `172.16.0.0/12`), so
+   rate limits apply per real client rather than to the proxy as a whole.
 
 5. **Check it.** GitHub's App settings → Advanced → Recent deliveries should show `202` for a
    test pull request; the dashboard should list the review within a minute or two.
