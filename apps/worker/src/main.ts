@@ -68,6 +68,7 @@ const limits = {
   maxCostUsdPerInstallationPerDay: env.MAX_COST_USD_PER_INSTALLATION_PER_DAY || null,
   maxChangedLines: env.MAX_PR_CHANGED_LINES || null,
   maxChangedFiles: env.MAX_PR_CHANGED_FILES || null,
+  maxDiffBytes: env.MAX_PR_DIFF_BYTES || null,
 };
 const parseCache = new DbParseCache(db);
 // API keys are read here and never logged; key rotation events name keys as key#N.

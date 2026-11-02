@@ -234,6 +234,32 @@ describe('processReviewJob', () => {
     expect(t.store.store.startReview).not.toHaveBeenCalled();
   });
 
+  it('skips when the store refuses the review atomically at the cap', async () => {
+    const t = deps([GOOD_COMMENT], fakeGitHub(), fakeStore({ limited: 'rate_limited' }));
+    const result = await processReviewJob(job, { ...t.deps, feedback: feedbackStore(), limits });
+    expect(result).toEqual({ status: 'skipped', reason: 'rate_limited' });
+    expect(t.provider.requests).toHaveLength(0);
+    expect(t.store.store.startReview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limits: expect.objectContaining({ githubRepoId: 8, maxReviewsPerRepo: 10 }) as unknown,
+      }),
+    );
+  });
+
+  it('refuses an oversized diff before parsing it', async () => {
+    // The compare diff is external input of any size; parsing megabytes of it is work
+    // an attacker controls with one push.
+    const huge = DIFF + '+x\n'.repeat(2_000);
+    const t = deps([GOOD_COMMENT], fakeGitHub({ diff: huge }));
+    const result = await processReviewJob(job, {
+      ...t.deps,
+      feedback: feedbackStore(),
+      limits: { ...limits, maxChangedLines: null, maxDiffBytes: 1_000 },
+    });
+    expect(result).toEqual({ status: 'skipped', reason: 'too_large' });
+    expect(t.provider.requests).toHaveLength(0);
+  });
+
   it('skips pull requests over the size limit before any LLM call', async () => {
     const big = DIFF.replace('+const y = x / 0;\n', '+const y = x / 0;\n'.repeat(101));
     const t = deps([GOOD_COMMENT], fakeGitHub({ diff: big }));

@@ -10,6 +10,8 @@ export interface ReviewLimits {
   maxChangedLines: number | null;
   /** Changed files above which a pull request is not reviewed. */
   maxChangedFiles: number | null;
+  /** Diff size in characters above which it is not even parsed. */
+  maxDiffBytes?: number | null;
 }
 
 export const NO_LIMITS: ReviewLimits = {

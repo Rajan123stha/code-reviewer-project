@@ -126,6 +126,11 @@ export async function processReviewJob(
           }
         }
         const diff = await fetchCompareDiff(client, repo, job.baseSha, job.headSha);
+        // The diff is external input of any size: check its length before parsing it.
+        if (limits.maxDiffBytes != null && diff.length > limits.maxDiffBytes) {
+          log.info({ diffBytes: diff.length }, 'diff too large to review');
+          return { status: 'skipped', reason: 'too_large' };
+        }
         const changed = parseUnifiedDiff(diff);
         const size = {
           files: changed.length,
@@ -151,12 +156,32 @@ export async function processReviewJob(
             baseSha: job.baseSha,
           },
         });
+        // The check above is a cheap early exit; this one is authoritative: the usage count
+        // and the new review row are written atomically, so concurrent jobs cannot all slip
+        // under a cap.
+        const capped =
+          limits.maxReviewsPerRepoPerDay !== null ||
+          limits.maxCostUsdPerInstallationPerDay !== null;
         const start = await deps.store.startReview({
           pullRequestId,
           headSha: job.headSha,
           config: deps.config,
           configHash: configHash(deps.config),
+          ...(capped
+            ? {
+                limits: {
+                  githubRepoId: job.repositoryId,
+                  since: new Date(Date.now() - USAGE_WINDOW_MS),
+                  maxReviewsPerRepo: limits.maxReviewsPerRepoPerDay,
+                  maxCostUsdPerInstallation: limits.maxCostUsdPerInstallationPerDay,
+                },
+              }
+            : {}),
         });
+        if ('limited' in start) {
+          log.warn({ reached: start.limited }, 'usage limit reached; skipping review');
+          return { status: 'skipped', reason: start.limited };
+        }
         reviewId = start.reviewId;
         if (start.alreadyPosted) {
           log.info({ reviewId }, 'review already posted for this commit and config');

@@ -34,6 +34,7 @@ export const workerEnvSchema = z
     MAX_COST_USD_PER_INSTALLATION_PER_DAY: z.coerce.number().min(0).default(0),
     MAX_PR_CHANGED_LINES: z.coerce.number().int().min(0).default(5000),
     MAX_PR_CHANGED_FILES: z.coerce.number().int().min(0).default(200),
+    MAX_PR_DIFF_BYTES: z.coerce.number().int().min(0).default(5_000_000),
     // Model keys are read by the LLM factory; declared here so a missing key fails at startup.
     GEMINI_API_KEYS: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
