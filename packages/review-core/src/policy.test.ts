@@ -183,3 +183,33 @@ index 1..0
     expect(changedNear(later, { file: 'src/other.ts', line: 8 })).toBe(false);
   });
 });
+
+describe('parsePolicy with hostile files', () => {
+  it('rejects __proto__ keys without polluting objects', () => {
+    const { policy, errors } = parsePolicy('__proto__:\n  enabled: false\nconstructor:\n  x: 1\n');
+    expect(errors.length).toBeGreaterThan(0);
+    expect(policy).toEqual(DEFAULT_POLICY);
+    expect(({} as Record<string, unknown>).enabled).toBeUndefined();
+  });
+
+  it('refuses an alias bomb instead of expanding it', () => {
+    const levels = ['a: &a ["x","x","x","x","x","x","x","x","x"]'];
+    for (let i = 1; i < 9; i++) {
+      const prev = String.fromCharCode(96 + i);
+      const next = String.fromCharCode(97 + i);
+      levels.push(`${next}: &${next} [${Array(9).fill(`*${prev}`).join(',')}]`);
+    }
+    const started = Date.now();
+    const { policy, errors } = parsePolicy(levels.join('\n'));
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(policy).toEqual(DEFAULT_POLICY);
+  });
+
+  it('accepts the boundary values of every setting', () => {
+    expect(parsePolicy('max_comments: 50').policy.maxComments).toBe(50);
+    expect(parsePolicy('max_comments: 51').errors).toHaveLength(1);
+    expect(parsePolicy(`ignore: [${Array(100).fill('"a/**"').join(',')}]`).errors).toEqual([]);
+    expect(parsePolicy(`ignore: [${Array(101).fill('"a/**"').join(',')}]`).errors).toHaveLength(1);
+  });
+});

@@ -6,7 +6,15 @@ export type RejectReason =
   | 'line_not_in_diff'
   | 'evidence_not_found'
   | 'empty_claim'
-  | 'confidence_out_of_range';
+  | 'confidence_out_of_range'
+  | 'too_long';
+
+/**
+ * Upper bounds on model-written fields. The model's output is untrusted input: GitHub rejects
+ * comment bodies over 65,536 characters (failing the whole review), and nobody reads a claim
+ * longer than a page. A comment over any limit is rejected, not truncated.
+ */
+export const FIELD_LIMITS = { claim: 2_000, evidence: 4_000, suggested_fix: 4_000 } as const;
 
 interface FileIndex {
   /** New-file lines GitHub accepts inline comments on: added and context lines. */
@@ -49,6 +57,13 @@ export class DiffIndex {
     if (!file) return 'file_not_in_diff';
     if (!file.commentable.has(comment.line)) return 'line_not_in_diff';
     if (!comment.claim.trim()) return 'empty_claim';
+    if (
+      comment.claim.length > FIELD_LIMITS.claim ||
+      comment.evidence.length > FIELD_LIMITS.evidence ||
+      (comment.suggested_fix?.length ?? 0) > FIELD_LIMITS.suggested_fix
+    ) {
+      return 'too_long';
+    }
     if (comment.confidence < 0 || comment.confidence > 1) return 'confidence_out_of_range';
     const evidence = normalizeEvidence(comment.evidence);
     if (evidence.length < 2 || !file.haystack.includes(evidence)) return 'evidence_not_found';

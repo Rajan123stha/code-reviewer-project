@@ -172,8 +172,20 @@ export function parseLsTree(output: string): RepoFileEntry[] {
   return entries;
 }
 
+/**
+ * Revisions reach git as command-line arguments. One starting with "-" would be read as an
+ * option (git diff --output=<file> writes files), so only revision-shaped values pass.
+ */
+export function assertRevision(rev: string): string {
+  if (!/^[A-Za-z0-9._/@{}^~:+-]{1,255}$/.test(rev) || rev.startsWith('-')) {
+    throw new Error('not a valid git revision');
+  }
+  return rev;
+}
+
 /** Resolve a revision (branch, tag, HEAD~1) to a commit SHA. */
 export async function gitRevParse(repoDir: string, rev: string): Promise<string> {
+  assertRevision(rev);
   const { stdout } = await exec(
     'git',
     ['-C', repoDir, 'rev-parse', '--verify', `${rev}^{commit}`],
@@ -186,6 +198,8 @@ export async function gitRevParse(repoDir: string, rev: string): Promise<string>
 
 /** Three-dot diff (merge-base to head), the same comparison a GitHub PR shows. */
 export async function gitDiff(repoDir: string, base: string, head: string): Promise<string> {
+  assertRevision(base);
+  assertRevision(head);
   const { stdout } = await exec(
     'git',
     ['-C', repoDir, 'diff', '--no-color', '--no-ext-diff', '--no-textconv', `${base}...${head}`],

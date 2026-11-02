@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { isFixCommit, summarizeCommit, type FixCommit } from '@reviewlens/context-engine';
+import { assertRevision } from './snapshot.js';
 
 const exec = promisify(execFile);
 
@@ -27,7 +28,7 @@ export async function gitFixCommits(
       '-C',
       repoDir,
       'log',
-      baseSha,
+      assertRevision(baseSha),
       `-n${limit}`,
       '--no-merges',
       '--name-only',

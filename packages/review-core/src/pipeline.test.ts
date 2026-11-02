@@ -161,3 +161,36 @@ describe('runReview', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('model output limits', () => {
+  it('rejects comments too long to post, keeping the rest of the review', async () => {
+    const { llm } = setup([
+      comment({ claim: 'x'.repeat(70_000) }),
+      comment({
+        line: 15,
+        evidence: 'return sum - sum * pct;',
+        claim: 'Discount no longer divides by 100.',
+      }),
+      comment({
+        line: 15,
+        evidence: 'return sum - sum * pct;',
+        suggested_fix: 'y'.repeat(9_000),
+        claim: 'Other.',
+      }),
+    ]);
+    const run = await runReview(sampleInput(), PRESETS.S0, { llm });
+    expect(run.candidates.map((c) => [c.status, c.rejectReason])).toEqual([
+      ['invalid', 'too_long'],
+      ['selected', null],
+      ['invalid', 'too_long'],
+    ]);
+    // Every posted body fits GitHub's limit with room to spare.
+    for (const c of run.selected) expect(c.body.length).toBeLessThan(65_536);
+  });
+
+  it('accepts fields at the limit', async () => {
+    const { llm } = setup([comment({ claim: 'a'.repeat(2_000) })]);
+    const run = await runReview(sampleInput(), PRESETS.S0, { llm });
+    expect(run.candidates[0]!.status).toBe('selected');
+  });
+});
