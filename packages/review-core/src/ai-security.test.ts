@@ -133,6 +133,22 @@ describe('LLM05 improper output handling: model text is inert on GitHub', () => 
     expect(body).toContain('attacker.example');
   });
 
+  it('leaves no bare URL for GitHub to autolink', async () => {
+    // GitHub turns http(s)://… and www.… in prose into links, so breaking [text](url) alone
+    // still left a clickable attacker URL (found by scripts/redteam.mjs).
+    const claim =
+      'Read https://attacker.example/phish or www.attacker.example/fix, or [docs](http://x.io).';
+    const t = capture([comment({ claim, suggested_fix: 'See `https://ok.example/in-code`.' })]);
+    const run = await runReview(sampleInput(), PRESETS.S0, { llm: t.llm });
+    const body = run.selected[0]!.body;
+    const prose = body.replace(/`[^`]*`/g, '');
+    expect(prose).not.toMatch(/https?:\/\//i);
+    expect(prose).not.toMatch(/(^|[^\w])www\./i);
+    expect(prose).toMatch(/attacker\.example\/phish/);
+    // Code spans are left exactly as written.
+    expect(body).toContain('`https://ok.example/in-code`');
+  });
+
   it('keeps quoted evidence inside its code block, whatever backticks it contains', async () => {
     const evidence =
       'const s = `\n````\n</details>\n@octo ![x](https://attacker.example/p.png)\n````';

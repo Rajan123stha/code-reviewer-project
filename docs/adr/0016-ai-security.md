@@ -9,17 +9,17 @@ ADR 0015 covers classic input validation. A model in the loop adds threats of it
 input can carry instructions, the output is attacker-influenced text that the app posts under
 its own name, and user reactions to that output become training data. An audit against the
 OWASP Top 10 for LLM applications found five issues, each first reproduced by a failing test in
-`packages/review-core/src/ai-security.test.ts` (5 of 8 failed before the fix), plus one in
+`packages/review-core/src/ai-security.test.ts` (5 of 8 failed before the fix; a ninth, for bare-URL autolinks, was added after the red-team run below found the gap), plus one in
 feedback collection (`apps/worker/src/feedback.test.ts`).
 
-| Finding                                                                                                                          | Fix                                                                                                           |
-| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| A PR title, description, diff or file could contain `</diff>` or `</pull_request>` and continue as if outside the data           | `neutralizePromptTags` escapes the prompt's own tag names (`<` to `&lt;`) in every untrusted field            |
-| The same breakout worked through comment fields fed to the verifier and the judge                                                | Same escaping in `verify.ts` and `judge.ts`                                                                   |
-| Model prose was posted as live markdown: `@mentions` notified people, `![](url)` loaded tracking images, links and HTML rendered | `inertMarkdown` breaks mentions, images and links with a zero-width space and escapes `<`, outside code spans |
-| Evidence containing three backticks closed its fence and the rest rendered as markdown                                           | `codeFence` uses a fence one longer than the longest backtick run                                             |
-| Title and body were unbounded (a 1 MB body went into the prompt)                                                                 | Title capped at 300 characters, body at 6,000, with a `[truncated]` marker                                    |
-| Any account's reactions on a public repository became filter labels                                                              | Only the PR author's reactions count; the closed-PR job carries the author's login                            |
+| Finding                                                                                                                          | Fix                                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A PR title, description, diff or file could contain `</diff>` or `</pull_request>` and continue as if outside the data           | `neutralizePromptTags` escapes the prompt's own tag names (`<` to `&lt;`) in every untrusted field                                                |
+| The same breakout worked through comment fields fed to the verifier and the judge                                                | Same escaping in `verify.ts` and `judge.ts`                                                                                                       |
+| Model prose was posted as live markdown: `@mentions` notified people, `![](url)` loaded tracking images, links and HTML rendered | `inertMarkdown` breaks mentions, images, links and bare URLs (which GitHub autolinks) with a zero-width space and escapes `<`, outside code spans |
+| Evidence containing three backticks closed its fence and the rest rendered as markdown                                           | `codeFence` uses a fence one longer than the longest backtick run                                                                                 |
+| Title and body were unbounded (a 1 MB body went into the prompt)                                                                 | Title capped at 300 characters, body at 6,000, with a `[truncated]` marker                                                                        |
+| Any account's reactions on a public repository became filter labels                                                              | Only the PR author's reactions count; the closed-PR job carries the author's login                                                                |
 
 ## Decisions
 

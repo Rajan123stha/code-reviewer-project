@@ -64,6 +64,9 @@ function inertProse(text: string): string {
       .replace(/!\[/g, `!${ZWSP}[`)
       .replace(/\]\(/g, `]${ZWSP}(`)
       .replace(/\]\[/g, `]${ZWSP}[`)
+      // Bare URLs, which GitHub autolinks: keep the text, break the scheme and www. prefix.
+      .replace(/\b([a-z][a-z0-9+.-]*):\/\//gi, `$1:${ZWSP}//`)
+      .replace(/\bwww\./gi, `www${ZWSP}.`)
   );
 }
 
