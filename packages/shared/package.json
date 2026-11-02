@@ -25,6 +25,6 @@
     "@opentelemetry/instrumentation-ioredis": "^0.70.0",
     "@opentelemetry/sdk-node": "^0.222.0",
     "pino": "^10.3.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   }
 }

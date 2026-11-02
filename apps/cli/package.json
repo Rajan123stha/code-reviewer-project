@@ -20,6 +20,6 @@
     "@reviewlens/llm": "workspace:*",
     "@reviewlens/review-core": "workspace:*",
     "@reviewlens/shared": "workspace:*",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   }
 }
