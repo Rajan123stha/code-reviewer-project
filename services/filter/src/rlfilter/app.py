@@ -8,12 +8,78 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from . import model as model_io
 from .features import FEATURES_VERSION, FeatureError
 from .model import Model
 
 MAX_ITEMS = 500
+# 500 feature objects are about 300 kB of JSON; anything far beyond that is not a real request.
+MAX_BODY_BYTES = 1_000_000
+
+
+class BodyLimit:
+    """Refuse request bodies over a size, before they are read into memory or parsed.
+
+    Checks Content-Length up front and counts streamed (chunked) bodies as they arrive, since
+    a client can omit or understate the header.
+    """
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        for name, value in scope.get("headers", []):
+            if name == b"content-length" and (not value.isdigit() or int(value) > self.max_bytes):
+                await _too_large(send)
+                return
+        # Read the whole body here, never more than the limit, then hand the app a replay.
+        chunks: list[bytes] = []
+        seen = 0
+        while True:
+            message = await receive()
+            if message["type"] != "http.request":
+                await self.app(scope, receive, send)  # disconnect: let the app see it
+                return
+            chunk = message.get("body", b"")
+            seen += len(chunk)
+            if seen > self.max_bytes:
+                await _too_large(send)
+                return
+            chunks.append(chunk)
+            if not message.get("more_body", False):
+                break
+        body = b"".join(chunks)
+        sent = False
+
+        async def replay() -> Message:
+            nonlocal sent
+            if sent:
+                return await receive()
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        await self.app(scope, replay, send)
+
+
+async def _too_large(send: Send) -> None:
+    body = b'{"detail":"request body too large"}'
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 413,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": body})
 
 
 class ScoreRequest(BaseModel):
@@ -28,8 +94,9 @@ class ScoreResponse(BaseModel):
     scores: list[float]
 
 
-def create_app(model: Model) -> FastAPI:
+def create_app(model: Model, max_body_bytes: int = MAX_BODY_BYTES) -> FastAPI:
     app = FastAPI(title="Reviewlens filter", version=model.version)
+    app.add_middleware(BodyLimit, max_bytes=max_body_bytes)
 
     @app.get("/health")
     def health() -> dict[str, Any]:
