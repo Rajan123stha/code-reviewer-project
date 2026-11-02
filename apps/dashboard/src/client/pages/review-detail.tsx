@@ -14,7 +14,17 @@ import {
   REVIEW_STATUS,
   ScoreBar,
 } from '../components.js';
-import { count, dateTime, duration, humanize, shortSha, tokens, usd } from '../format.js';
+import {
+  count,
+  dateTime,
+  duration,
+  githubBlobUrl,
+  githubPullUrl,
+  humanize,
+  shortSha,
+  tokens,
+  usd,
+} from '../format.js';
 import { href, useApi } from '../lib.js';
 
 type Filter = 'all' | 'posted' | 'not_posted';
@@ -38,7 +48,7 @@ export function ReviewDetailPage({ id }: { id: string }) {
   if (!r) return <Empty title="Loading…" />;
 
   const status = REVIEW_STATUS[r.status] ?? { tone: 'neutral' as const, label: r.status };
-  const prUrl = `https://github.com/${r.repository}/pull/${r.pullNumber}`;
+  const prUrl = githubPullUrl(r.repository, r.pullNumber);
   const byStatus = new Map<string, number>();
   for (const c of r.candidateList) byStatus.set(c.status, (byStatus.get(c.status) ?? 0) + 1);
   // Posted comments first, in the order they were posted; then the rest by what stopped them.
@@ -67,9 +77,11 @@ export function ReviewDetailPage({ id }: { id: string }) {
               {r.repository} #{r.pullNumber}
             </span>
             <span className="mono muted">{shortSha(r.headSha)}</span>
-            <a href={prUrl} target="_blank" rel="noreferrer noopener">
-              Open on GitHub <Icon name="external" size={13} />
-            </a>
+            {prUrl && (
+              <a href={prUrl} target="_blank" rel="noreferrer noopener">
+                Open on GitHub <Icon name="external" size={13} />
+              </a>
+            )}
           </span>
         }
       />
@@ -215,16 +227,22 @@ function CandidateItem({ c, repo, sha }: { c: CandidateDetail; repo: string; sha
     label: c.status,
     hint: '',
   };
-  const fileUrl = `https://github.com/${repo}/blob/${sha}/${c.file}#L${c.line}`;
+  const fileUrl = githubBlobUrl(repo, sha, c.file, c.line);
   return (
     <article className="comment">
       <div className="comment-head">
         <span title={status.hint}>
           <Badge tone={status.tone}>{status.label}</Badge>
         </span>
-        <a className="mono" href={fileUrl} target="_blank" rel="noreferrer noopener">
-          {c.file}:{c.line}
-        </a>
+        {fileUrl ? (
+          <a className="mono" href={fileUrl} target="_blank" rel="noreferrer noopener">
+            {c.file}:{c.line}
+          </a>
+        ) : (
+          <span className="mono">
+            {c.file}:{c.line}
+          </span>
+        )}
         <span className="chip">{humanize(c.category)}</span>
         <span className="chip">{humanize(c.severity)}</span>
         {c.rank !== null && <span className="chip">rank {c.rank}</span>}

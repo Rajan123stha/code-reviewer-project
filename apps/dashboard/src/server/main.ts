@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { createDashboardStore, createDb } from '@reviewlens/db';
 import { createLogger, parseEnv } from '@reviewlens/shared';
 import { buildDashboard } from './app.js';
-import { dashboardEnvSchema } from './env.js';
+import { allowedHosts, dashboardEnvSchema } from './env.js';
 import { fileExperiments } from './experiments.js';
 
 const env = parseEnv(dashboardEnvSchema);
@@ -16,6 +16,8 @@ const app = buildDashboard({
   ),
   clientDir: fileURLToPath(new URL('../client', import.meta.url)),
   password: env.DASHBOARD_PASSWORD,
+  allowedHosts: allowedHosts(env.DASHBOARD_PORT, env.DASHBOARD_ALLOWED_HOSTS),
+  trustProxy: env.TRUST_PROXY,
   logger,
 });
 

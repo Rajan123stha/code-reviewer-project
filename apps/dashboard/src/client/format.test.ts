@@ -54,3 +54,23 @@ describe('scale', () => {
     expect(labelIndices(31, 6)).toEqual([0, 6, 12, 18, 24, 30]);
   });
 });
+
+describe('GitHub links', () => {
+  it('encodes each path segment, so a file name cannot add a query or fragment', async () => {
+    const { githubBlobUrl, githubPullUrl } = await import('./format.js');
+    expect(githubBlobUrl('octo/shop', 'a'.repeat(40), 'src/cart.ts', 8)).toBe(
+      `https://github.com/octo/shop/blob/${'a'.repeat(40)}/src/cart.ts#L8`,
+    );
+    expect(githubBlobUrl('octo/shop', 'abc', 'src/a?x=1#L1 b.ts', 5)).toBe(
+      'https://github.com/octo/shop/blob/abc/src/a%3Fx%3D1%23L1%20b.ts#L5',
+    );
+    expect(githubPullUrl('octo/shop', 12)).toBe('https://github.com/octo/shop/pull/12');
+  });
+
+  it('gives no link for a repository name that is not owner/name', async () => {
+    const { githubBlobUrl, githubPullUrl } = await import('./format.js');
+    expect(githubPullUrl('javascript:alert(1)//x', 1)).toBeNull();
+    expect(githubPullUrl('octo/../../evil', 1)).toBeNull();
+    expect(githubBlobUrl('a/b/c', 's', 'f', 1)).toBeNull();
+  });
+});

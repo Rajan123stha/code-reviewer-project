@@ -8,6 +8,7 @@ import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { createDashboardStore, createDb } from '@reviewlens/db';
 import { createLogger } from '@reviewlens/shared';
 import { buildDashboard } from './app.js';
+import { allowedHosts } from './env.js';
 import { seedDemo } from './demo-data.js';
 import { fileExperiments } from './experiments.js';
 
@@ -36,6 +37,7 @@ const app = buildDashboard({
   experiments: fileExperiments(fileURLToPath(new URL('eval/results', root))),
   clientDir: fileURLToPath(new URL('../../dist/client', import.meta.url)),
   demo: true,
+  allowedHosts: allowedHosts(port),
   logger: createLogger('dashboard', { level: 'warn' }),
 });
 await app.listen({ host: '127.0.0.1', port });

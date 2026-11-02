@@ -81,3 +81,26 @@ export function humanize(value: string): string {
     .replace(/\bapi\b/gi, 'API');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+const REPOSITORY = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
+
+/**
+ * Links to GitHub built from stored data. Repository names are checked against GitHub's
+ * format, and file paths (which come from the reviewed repository, and may contain '?' or
+ * '#') are encoded segment by segment, so data can never change the link's target.
+ */
+export function githubPullUrl(repository: string, number: number): string | null {
+  if (!REPOSITORY.test(repository) || !Number.isSafeInteger(number)) return null;
+  return `https://github.com/${repository}/pull/${number}`;
+}
+
+export function githubBlobUrl(
+  repository: string,
+  sha: string,
+  path: string,
+  line: number,
+): string | null {
+  if (!REPOSITORY.test(repository) || !Number.isSafeInteger(line)) return null;
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  return `https://github.com/${repository}/blob/${encodeURIComponent(sha)}/${encoded}#L${line}`;
+}

@@ -18,6 +18,7 @@ export default defineConfig({
   server: {
     port: 5173,
     // `pnpm dev:client` talks to `pnpm dev:server`.
-    proxy: { '/api': 'http://127.0.0.1:4000' },
+    // changeOrigin sends Host: 127.0.0.1:4000, which the server's host check accepts.
+    proxy: { '/api': { target: 'http://127.0.0.1:4000', changeOrigin: true } },
   },
 });

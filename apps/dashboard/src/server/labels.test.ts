@@ -206,6 +206,35 @@ describe('labeling API', { timeout: 30_000 }, () => {
     ]);
   });
 
+  it('enforces field limits at their boundaries and rejects other content types', async () => {
+    const url = '/api/labels/benchmark/case-1';
+    expect(
+      (await post(url, { verdict: 'valid', labeler: 'r'.repeat(100), note: 'n'.repeat(2000) }))
+        .statusCode,
+    ).toBe(200);
+    expect((await post(url, { verdict: 'valid', labeler: 'r'.repeat(101) })).statusCode).toBe(400);
+    expect(
+      (await post(url, { verdict: 'valid', labeler: 'r', note: 'n'.repeat(2001) })).statusCode,
+    ).toBe(400);
+    expect((await post(url, { verdict: 'valid', labeler: '   ' })).statusCode).toBe(400);
+    expect((await post(url, { verdict: ['valid'], labeler: 'r' })).statusCode).toBe(400);
+    const form = await app().inject({
+      method: 'POST',
+      url,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'verdict=valid&labeler=r',
+    });
+    expect(form.statusCode).toBe(415);
+    const poisoned = await app().inject({
+      method: 'POST',
+      url,
+      headers: { 'content-type': 'application/json' },
+      payload: '{"verdict":"valid","labeler":"r","__proto__":{"admin":true}}',
+    });
+    expect(poisoned.statusCode).toBe(400);
+    expect(({} as Record<string, unknown>).admin).toBeUndefined();
+  });
+
   it('is absent unless enabled', async () => {
     const plain = buildDashboard({ store: null, experiments: noExperiments });
     expect((await plain.inject('/api/labels/benchmark')).statusCode).toBe(404);

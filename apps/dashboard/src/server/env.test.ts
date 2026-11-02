@@ -34,3 +34,28 @@ describe('dashboard configuration', () => {
     ).toBe('0.0.0.0');
   });
 });
+
+describe('allowed hosts', () => {
+  it('covers loopback on the port and configured public names', async () => {
+    const { allowedHosts } = await import('./env.js');
+    expect(allowedHosts(4000)).toEqual(['127.0.0.1:4000', 'localhost:4000', '[::1]:4000']);
+    expect(allowedHosts(4000, ' reviews.example.com , other.example ')).toEqual([
+      '127.0.0.1:4000',
+      'localhost:4000',
+      '[::1]:4000',
+      'reviews.example.com',
+      'other.example',
+      'reviews.example.com:4000',
+      'other.example:4000',
+    ]);
+    expect(
+      parseEnv(dashboardEnvSchema, {
+        DATABASE_URL: DB,
+        DASHBOARD_ALLOWED_HOSTS: 'a.example,[::1]:4000',
+      }).DASHBOARD_ALLOWED_HOSTS,
+    ).toBe('a.example,[::1]:4000');
+    expect(
+      failure({ DATABASE_URL: DB, DASHBOARD_ALLOWED_HOSTS: 'evil.example/<script>' }),
+    ).toContain('DASHBOARD_ALLOWED_HOSTS');
+  });
+});

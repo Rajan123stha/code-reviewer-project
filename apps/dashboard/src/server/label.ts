@@ -3,6 +3,7 @@
 import { fileURLToPath } from 'node:url';
 import { createLogger } from '@reviewlens/shared';
 import { buildDashboard } from './app.js';
+import { allowedHosts } from './env.js';
 import { fileExperiments } from './experiments.js';
 import { defaultReposDir } from './labels.js';
 
@@ -21,6 +22,7 @@ const app = buildDashboard({
     results: path('eval/results'),
     repos: defaultReposDir(),
   },
+  allowedHosts: allowedHosts(port),
   logger: createLogger('dashboard', { level: 'warn' }),
 });
 // Loopback only: labeling writes files and asks for no password.
