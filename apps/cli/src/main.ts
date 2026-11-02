@@ -31,6 +31,7 @@ import {
   type ReviewInput,
   type StrategyId,
 } from '@reviewlens/review-core';
+import { redactSecrets } from '@reviewlens/shared';
 import { gitFixCommits } from './history.js';
 import { directorySnapshot, gitDiff, gitRevParse, gitSnapshot } from './snapshot.js';
 import { summarize } from './summary.js';
@@ -133,7 +134,9 @@ function providerName(values: Values): ProviderName {
   return name;
 }
 
-const onCall = (call: LLMCallRecord) => console.error(`[llm] ${JSON.stringify(call)}`);
+// Provider error text can carry anything; every diagnostic line is redacted before printing.
+const onCall = (call: LLMCallRecord) =>
+  console.error(`[llm] ${redactSecrets(JSON.stringify(call))}`);
 
 async function index(values: Values) {
   const snapshot = values.git
@@ -266,8 +269,8 @@ async function review(values: Values) {
       cache,
       onCall,
       embeddingCache,
-      onKeyEvent: (e) => console.error(`[keys] ${JSON.stringify(e)}`),
-      onModelEvent: (e) => console.error(`[model] ${JSON.stringify(e)}`),
+      onKeyEvent: (e) => console.error(`[keys] ${redactSecrets(JSON.stringify(e))}`),
+      onModelEvent: (e) => console.error(`[model] ${redactSecrets(JSON.stringify(e))}`),
     });
     llm = real.llm;
     embeddings =
@@ -330,7 +333,7 @@ async function judge(values: Values, kind: 'comment' | 'match') {
         provider,
         cache: values['cache-dir'] ? new FileCache(values['cache-dir']) : undefined,
         onCall,
-        onModelEvent: (e) => console.error(`[model] ${JSON.stringify(e)}`),
+        onModelEvent: (e) => console.error(`[model] ${redactSecrets(JSON.stringify(e))}`),
       }).llm;
   const fallbackModels =
     values['fallback-models'] !== undefined
@@ -368,7 +371,8 @@ main().catch((error: unknown) => {
   // The last stderr line is machine-readable, so the eval harness can tell quota
   // exhaustion (stop and resume later) from a failure of this one case.
   const kind = error instanceof LLMError ? error.kind : 'error';
-  const message = error instanceof Error ? error.message : String(error);
+  // The harness stores this line in result files: strip anything credential-shaped.
+  const message = redactSecrets(error instanceof Error ? error.message : String(error));
   console.error(`[error] ${JSON.stringify({ kind, message })}`);
   const transient = kind === 'rate_limit' || kind === 'server' || kind === 'connection';
   process.exit(transient ? 3 : 1);

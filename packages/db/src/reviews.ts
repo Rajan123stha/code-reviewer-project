@@ -1,5 +1,6 @@
 import type { ReviewRun, StrategyConfig } from '@reviewlens/review-core';
 import type { FixCommit } from '@reviewlens/context-engine';
+import { redactSecrets } from '@reviewlens/shared';
 import type { Db } from './client.js';
 import { fixCommitsBefore } from './knowledge.js';
 import type { Prisma } from './generated/prisma/client.js';
@@ -179,7 +180,10 @@ export async function markPosted(
 }
 
 export async function markFailed(db: Db, reviewId: number, error: unknown): Promise<void> {
-  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  // Stored and shown in the dashboard: strip anything credential-shaped first.
+  const message = redactSecrets(
+    error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+  );
   await db.review.update({
     where: { id: reviewId },
     data: { status: 'failed', error: message.slice(0, 4_000), finishedAt: new Date() },

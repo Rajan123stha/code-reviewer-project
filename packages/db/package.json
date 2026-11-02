@@ -32,6 +32,7 @@
     "@reviewlens/context-engine": "workspace:*",
     "@reviewlens/llm": "workspace:*",
     "@reviewlens/review-core": "workspace:*",
+    "@reviewlens/shared": "workspace:*",
     "pg": "^8.23.1"
   },
   "devDependencies": {
