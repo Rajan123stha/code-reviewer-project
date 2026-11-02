@@ -4,8 +4,8 @@ A GitHub App that reviews pull requests using structural repository context (AST
 graph, conventions, past bugs) and filters its own comments with a learned usefulness model. Every
 design choice is measured against a benchmark built from real bug-fix history.
 
-> **Status: Phase 8 built (feedback, repository settings, limits, dashboard, verifier, deployment
-> files); not yet deployed to a public host.** Six context strategies review pull requests, Benchmark A
+> **Status: feature-complete for v1 and security-reviewed (see [SECURITY.md](SECURITY.md)); not
+> yet deployed to a public host.** Six context strategies review pull requests, Benchmark A
 > (1,022 bug-introducing changes) is built, the harness runs and scores ablations over it, and
 > the usefulness filter (features, training, scoring service) is implemented. No ablation has
 > been run at full size and no filter has been trained on real data yet. See
@@ -59,14 +59,16 @@ Only the `opened` and `synchronize` actions on `pull_request` start a review. Th
 
 The app records what happens to each comment it posts, as training data for the filter:
 
-| Event                                | Recorded                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------- |
-| A later push to the pull request     | `resolved_with_change` if lines within 3 of the comment changed           |
-| The comment's thread is resolved     | `dismissed`, unless its lines had changed                                 |
-| The pull request is merged or closed | `thumbs_up` / `thumbs_down` from reactions; `ignored` if nothing happened |
+| Event                                | Recorded                                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| A later push to the pull request     | `resolved_with_change` if lines within 3 of the comment changed                           |
+| The comment's thread is resolved     | `dismissed`, unless its lines had changed                                                 |
+| The pull request is merged or closed | `thumbs_up` / `thumbs_down` from the PR author's reactions; `ignored` if nothing happened |
 
 `pnpm export:feedback feedback.jsonl` writes the labeled comments for
 `rlfilter dataset --feedback`. [ADR 0010](docs/adr/0010-feedback-policy-limits.md) has the rules.
+Only the PR author's reactions count, so other accounts cannot vote labels in
+([ADR 0016](docs/adr/0016-ai-security.md)).
 
 ### Repository settings: `.reviewlens.yml`
 
@@ -319,7 +321,15 @@ pnpm lint        # eslint + prettier --check
 pnpm build       # tsc emit, in dependency order
 ```
 
-CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pull request.
+CI (`.github/workflows/ci.yml`) runs the same four commands on every push and pull request,
+plus secret scanning, `pnpm audit` and the red-team prompt checks.
+
+## Security
+
+[SECURITY.md](SECURITY.md) maps the model-specific threats (OWASP Top 10 for LLM applications)
+to their defenses and tests, lists residual risks and says how to report a vulnerability.
+`node scripts/redteam.mjs` runs five prompt-injection and exfiltration cases against the prompt
+builder; add `--live` to check the model's output too (five model calls).
 
 ## Configuration
 
